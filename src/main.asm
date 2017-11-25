@@ -14,32 +14,38 @@ main PROC
     call Mover
     call ImprimirPersonagem
     jmp main
-
     exit
     main endp
 Mover PROC
     call ReadKey
-    je   FimMove
-    cmp dx,VK_UP  ; Indo pra cima?
-        jne MexerBaixo
+    je FimMove
+
+    cmp dx,VK_UP
+    je MoverCima
+
+    cmp dx,VK_DOWN
+    je MoverBaixo
+
+    cmp dx,VK_LEFT
+    je MoverEsq
+
+    cmp dx,VK_RIGHT
+    je MexerDireita
+
+    MoverCima:
         dec PosicaoY
-        jmp FimMove
-    MexerBaixo:
-    cmp dx,VK_DOWN  ; Indo pra baixo?
-        jne MexerEsq
+        ret
+    MoverBaixo:
         inc PosicaoY
-        jmp FimMove
-    MexerEsq:
-    cmp dx,VK_LEFT  ; Indo pra esquerda?
-        jne MexerDireita
+        ret
+    MoverEsq:
         dec PosicaoX
-        jmp FimMove
+        ret
     MexerDireita:
-    cmp dx,VK_RIGHT  ; Indo pra direita?
-        jne FimMove
         inc PosicaoX
+        ret
     FimMove:
-    ret
+        ret
 Mover endp
 ImprimirPersonagem PROC
     ;Pegando os dados pra checar se mudou a posição e pra apagar a posição antiga

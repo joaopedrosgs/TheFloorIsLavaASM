@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 12.00.21005.1	    11/25/17 15:38:40
+Microsoft (R) Macro Assembler Version 12.00.21005.1	    11/25/17 16:39:32
 main.asm						     Page 1 - 1
 
 
@@ -33,61 +33,67 @@ main.asm						     Page 1 - 1
  00000000  B8 00000014		    mov  eax,20          
  00000005  E8 00000000 E	    call Delay           
  0000000A  E8 0000000E		    call Mover
- 0000000F  E8 00000047		    call ImprimirPersonagem
+ 0000000F  E8 00000045		    call ImprimirPersonagem
  00000014  EB EA		    jmp main
-
 				    exit
  0000001D			    main endp
  0000001D			Mover PROC
- 0000001D  E8 00000000 E	    call ReadKey         ; look for keyboard input
- 00000022  74 36		    je   FimMove      ; no key pressed yet
- 00000024  66| 83 FA 26		    cmp dx,VK_UP  ; Indo pra cima?
- 00000028  75 08		        jne MexerBaixo
- 0000002A  FE 0D 00000002 R	        dec PosicaoY
- 00000030  EB 28		        jmp FimMove
- 00000032			    MexerBaixo:
- 00000032  66| 83 FA 28		    cmp dx,VK_DOWN  ; Indo pra baixo?
- 00000036  75 08		        jne MexerEsq
- 00000038  FE 05 00000002 R	        inc PosicaoY
- 0000003E  EB 1A		        jmp FimMove
- 00000040			    MexerEsq:
- 00000040  66| 83 FA 25		    cmp dx,VK_LEFT  ; Indo pra esquerda?
- 00000044  75 08		        jne MexerDireita
- 00000046  FE 0D 00000000 R	        dec PosicaoX
- 0000004C  EB 0C		        jmp FimMove
- 0000004E			    MexerDireita:
- 0000004E  66| 83 FA 27		    cmp dx,VK_RIGHT  ; Indo pra direita?
- 00000052  75 06		        jne FimMove
- 00000054  FE 05 00000000 R	        inc PosicaoX
- 0000005A			    FimMove:
- 0000005A  C3			    ret
- 0000005B			Mover endp
- 0000005B			ImprimirPersonagem PROC
-				    ;Apagar a posicão antiga
- 0000005B  8A 15 00000001 R	    mov dl, PosicaoX[1]
- 00000061  8A 35 00000003 R	    mov dh, PosicaoY[1]
- 00000067  3A 15 00000000 R	    cmp dl, PosicaoX
- 0000006D  75 09		    jne MoverEfetivamente
- 0000006F  3A 35 00000002 R	    cmp dh, PosicaoY
- 00000075  75 01		    jne MoverEfetivamente
- 00000077  C3			    ret
- 00000078			    MoverEfetivamente:
- 00000078  E8 00000000 E	        call Gotoxy
- 0000007D  B0 20		        mov al, 32 
- 0000007F  E8 00000000 E	        call WriteChar
+ 0000001D  E8 00000000 E	    call ReadKey
+ 00000022  74 34		    je FimMove
+
+ 00000024  66| 83 FA 26		    cmp dx,VK_UP
+ 00000028  74 12		    je MoverCima
+
+ 0000002A  66| 83 FA 28		    cmp dx,VK_DOWN
+ 0000002E  74 13		    je MoverBaixo
+
+ 00000030  66| 83 FA 25		    cmp dx,VK_LEFT
+ 00000034  74 14		    je MoverEsq
+
+ 00000036  66| 83 FA 27		    cmp dx,VK_RIGHT
+ 0000003A  74 15		    je MexerDireita
+
+ 0000003C			    MoverCima:
+ 0000003C  FE 0D 00000002 R	        dec PosicaoY
+ 00000042  C3			        ret
+ 00000043			    MoverBaixo:
+ 00000043  FE 05 00000002 R	        inc PosicaoY
+ 00000049  C3			        ret
+ 0000004A			    MoverEsq:
+ 0000004A  FE 0D 00000000 R	        dec PosicaoX
+ 00000050  C3			        ret
+ 00000051			    MexerDireita:
+ 00000051  FE 05 00000000 R	        inc PosicaoX
+ 00000057  C3			        ret
+ 00000058			    FimMove:
+ 00000058  C3			        ret
+ 00000059			Mover endp
+ 00000059			ImprimirPersonagem PROC
+				    ;Pegando os dados pra checar se mudou a posição e pra apagar a posição antiga
+ 00000059  8A 15 00000001 R	    mov dl, PosicaoX[1]
+ 0000005F  8A 35 00000003 R	    mov dh, PosicaoY[1]
+ 00000065  3A 15 00000000 R	    cmp dl, PosicaoX
+ 0000006B  75 09		    jne ImprimirEfetivamente ; Jump para imprimir caso tenha mudado mesmo a posição
+ 0000006D  3A 35 00000002 R	    cmp dh, PosicaoY
+ 00000073  75 01		    jne ImprimirEfetivamente ; Jump para imprimir caso tenha mudado mesmo a posição
+ 00000075  C3			    ret
+ 00000076			    ImprimirEfetivamente:
+ 00000076  E8 00000000 E	        call Gotoxy
+ 0000007B  B0 20		        mov al, 32 
+ 0000007D  E8 00000000 E	        call WriteChar ; Apagando a posicão antiga
 				        ; Escrever na posição nova
- 00000084  8A 15 00000000 R	        mov dl, PosicaoX
- 0000008A  8A 35 00000002 R	        mov dh, PosicaoY
- 00000090  E8 00000000 E	        call Gotoxy
- 00000095  B0 FE		        mov al, 254
- 00000097  E8 00000000 E	        call WriteChar
+ 00000082  8A 15 00000000 R	        mov dl, PosicaoX
+ 00000088  8A 35 00000002 R	        mov dh, PosicaoY
+ 0000008E  E8 00000000 E	        call Gotoxy
+ 00000093  B0 FE		        mov al, 254
+ 00000095  E8 00000000 E	        call WriteChar
 				        ; Salvar a posicao antiga
- 0000009C  88 15 00000001 R	        mov PosicaoX[1], dl
- 000000A2  88 35 00000003 R	        mov PosicaoY[1], dh
- 000000A8  C3			        ret
- 000000A9			ImprimirPersonagem endp
+ 0000009A  88 15 00000001 R	        mov PosicaoX[1], dl
+ 000000A0  88 35 00000003 R	        mov PosicaoY[1], dh
+ 000000A6  C3			        ret
+ 000000A7			ImprimirPersonagem endp
 				end main
-Microsoft (R) Macro Assembler Version 12.00.21005.1	    11/25/17 15:38:40
+Microsoft (R) Macro Assembler Version 12.00.21005.1	    11/25/17 16:39:32
 main.asm						     Symbols 2 - 1
 
 
@@ -182,7 +188,7 @@ Segments and Groups:
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
 _DATA  . . . . . . . . . . . . .	32 Bit	 00000004 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 000000A9 Para	  Public  'CODE'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 000000A7 Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -228,16 +234,17 @@ HeapCreate . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 HeapDestroy  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 HeapFree . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 HeapSize . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-ImprimirPersonagem . . . . . . .	P Near	 0000005B _TEXT	Length= 0000004E Public STDCALL
-  MoverEfetivamente  . . . . . .	L Near	 00000078 _TEXT	
+ImprimirPersonagem . . . . . . .	P Near	 00000059 _TEXT	Length= 0000004E Public STDCALL
+  ImprimirEfetivamente . . . . .	L Near	 00000076 _TEXT	
 IsDigit  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 LocalFree  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 MessageBoxA  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-Mover  . . . . . . . . . . . . .	P Near	 0000001D _TEXT	Length= 0000003E Public STDCALL
-  MexerBaixo . . . . . . . . . .	L Near	 00000032 _TEXT	
-  MexerEsq . . . . . . . . . . .	L Near	 00000040 _TEXT	
-  MexerDireita . . . . . . . . .	L Near	 0000004E _TEXT	
-  FimMove  . . . . . . . . . . .	L Near	 0000005A _TEXT	
+Mover  . . . . . . . . . . . . .	P Near	 0000001D _TEXT	Length= 0000003C Public STDCALL
+  MoverCima  . . . . . . . . . .	L Near	 0000003C _TEXT	
+  MoverBaixo . . . . . . . . . .	L Near	 00000043 _TEXT	
+  MoverEsq . . . . . . . . . . .	L Near	 0000004A _TEXT	
+  MexerDireita . . . . . . . . .	L Near	 00000051 _TEXT	
+  FimMove  . . . . . . . . . . .	L Near	 00000058 _TEXT	
 MsgBoxAsk  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 MsgBox . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 OpenInputFile  . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
