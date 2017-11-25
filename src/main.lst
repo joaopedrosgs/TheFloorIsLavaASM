@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 12.00.21005.1	    11/25/17 10:31:15
+Microsoft (R) Macro Assembler Version 12.00.21005.1	    11/25/17 15:38:40
 main.asm						     Page 1 - 1
 
 
@@ -24,8 +24,8 @@ main.asm						     Page 1 - 1
 
  00000000			.data
 					;mapa byte 119 DUP(32), 0 ; string de caracteres do chão
- 00000000 00 00			    PosicaoX byte 0,0
- 00000002 00 00			    PosicaoY byte 0,0
+ 00000000 00 01			    PosicaoX byte 0,1
+ 00000002 00 01			    PosicaoY byte 0,1
 
  00000000			.code
  00000000			main PROC
@@ -64,25 +64,30 @@ main.asm						     Page 1 - 1
  0000005B			Mover endp
  0000005B			ImprimirPersonagem PROC
 				    ;Apagar a posicão antiga
- 0000005B  8A 15 00000001 R	    mov dl, [PosicaoX+1]
- 00000061  8A 35 00000003 R	    mov dh, [PosicaoY+1]
- 00000067  E8 00000000 E	    call Gotoxy
- 0000006C  B0 20		    mov al, 32 
- 0000006E  E8 00000000 E	    call WriteChar
-				    ; Escrever na posição nova
- 00000073  8A 15 00000000 R	    mov dl, PosicaoX
- 00000079  8A 35 00000002 R	    mov dh, PosicaoY
- 0000007F  E8 00000000 E	    call Gotoxy
- 00000084  B0 FE		    mov al, 254
- 00000086  E8 00000000 E	    call WriteChar
-				    ; Salvar a posicao antiga
- 0000008B  88 15 00000001 R	    mov PosicaoX+1, dl
- 00000091  88 35 00000003 R	    mov PosicaoY+1, dh
- 00000097			    fimMove:
- 00000097  C3			    ret
- 00000098			ImprimirPersonagem endp
+ 0000005B  8A 15 00000001 R	    mov dl, PosicaoX[1]
+ 00000061  8A 35 00000003 R	    mov dh, PosicaoY[1]
+ 00000067  3A 15 00000000 R	    cmp dl, PosicaoX
+ 0000006D  75 09		    jne MoverEfetivamente
+ 0000006F  3A 35 00000002 R	    cmp dh, PosicaoY
+ 00000075  75 01		    jne MoverEfetivamente
+ 00000077  C3			    ret
+ 00000078			    MoverEfetivamente:
+ 00000078  E8 00000000 E	        call Gotoxy
+ 0000007D  B0 20		        mov al, 32 
+ 0000007F  E8 00000000 E	        call WriteChar
+				        ; Escrever na posição nova
+ 00000084  8A 15 00000000 R	        mov dl, PosicaoX
+ 0000008A  8A 35 00000002 R	        mov dh, PosicaoY
+ 00000090  E8 00000000 E	        call Gotoxy
+ 00000095  B0 FE		        mov al, 254
+ 00000097  E8 00000000 E	        call WriteChar
+				        ; Salvar a posicao antiga
+ 0000009C  88 15 00000001 R	        mov PosicaoX[1], dl
+ 000000A2  88 35 00000003 R	        mov PosicaoY[1], dh
+ 000000A8  C3			        ret
+ 000000A9			ImprimirPersonagem endp
 				end main
-Microsoft (R) Macro Assembler Version 12.00.21005.1	    11/25/17 10:31:15
+Microsoft (R) Macro Assembler Version 12.00.21005.1	    11/25/17 15:38:40
 main.asm						     Symbols 2 - 1
 
 
@@ -177,7 +182,7 @@ Segments and Groups:
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
 _DATA  . . . . . . . . . . . . .	32 Bit	 00000004 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 00000098 Para	  Public  'CODE'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 000000A9 Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -223,8 +228,8 @@ HeapCreate . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 HeapDestroy  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 HeapFree . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 HeapSize . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-ImprimirPersonagem . . . . . . .	P Near	 0000005B _TEXT	Length= 0000003D Public STDCALL
-  fimMove  . . . . . . . . . . .	L Near	 00000097 _TEXT	
+ImprimirPersonagem . . . . . . .	P Near	 0000005B _TEXT	Length= 0000004E Public STDCALL
+  MoverEfetivamente  . . . . . .	L Near	 00000078 _TEXT	
 IsDigit  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 LocalFree  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 MessageBoxA  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL

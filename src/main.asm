@@ -3,8 +3,8 @@ Include ..\Irvine32.inc
 
 .data
 	;mapa byte 119 DUP(32), 0 ; string de caracteres do chão
-    PosicaoX byte 0,0
-    PosicaoY byte 0,0
+    PosicaoX byte 0,1
+    PosicaoY byte 0,1
 
 .code
 main PROC
@@ -18,8 +18,8 @@ main PROC
     exit
     main endp
 Mover PROC
-    call ReadKey         ; look for keyboard input
-    je   FimMove      ; no key pressed yet
+    call ReadKey
+    je   FimMove
     cmp dx,VK_UP  ; Indo pra cima?
         jne MexerBaixo
         dec PosicaoY
@@ -42,22 +42,27 @@ Mover PROC
     ret
 Mover endp
 ImprimirPersonagem PROC
-    ;Apagar a posicão antiga
-    mov dl, [PosicaoX+1]
-    mov dh, [PosicaoY+1]
-    call Gotoxy
-    mov al, 32 
-    call WriteChar
-    ; Escrever na posição nova
-    mov dl, PosicaoX
-    mov dh, PosicaoY
-    call Gotoxy
-    mov al, 254
-    call WriteChar
-    ; Salvar a posicao antiga
-    mov PosicaoX+1, dl
-    mov PosicaoY+1, dh
-    fimMove:
+    ;Pegando os dados pra checar se mudou a posição e pra apagar a posição antiga
+    mov dl, PosicaoX[1]
+    mov dh, PosicaoY[1]
+    cmp dl, PosicaoX
+    jne ImprimirEfetivamente ; Jump para imprimir caso tenha mudado mesmo a posição
+    cmp dh, PosicaoY
+    jne ImprimirEfetivamente ; Jump para imprimir caso tenha mudado mesmo a posição
     ret
+    ImprimirEfetivamente:
+        call Gotoxy
+        mov al, 32 
+        call WriteChar ; Apagando a posicão antiga
+        ; Escrever na posição nova
+        mov dl, PosicaoX
+        mov dh, PosicaoY
+        call Gotoxy
+        mov al, 254
+        call WriteChar
+        ; Salvar a posicao antiga
+        mov PosicaoX[1], dl
+        mov PosicaoY[1], dh
+        ret
 ImprimirPersonagem endp
 end main
