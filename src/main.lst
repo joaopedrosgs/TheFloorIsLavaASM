@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 12.00.21005.1	    11/23/17 22:22:35
+Microsoft (R) Macro Assembler Version 12.00.21005.1	    11/25/17 10:31:15
 main.asm						     Page 1 - 1
 
 
@@ -24,49 +24,65 @@ main.asm						     Page 1 - 1
 
  00000000			.data
 					;mapa byte 119 DUP(32), 0 ; string de caracteres do chão
+ 00000000 00 00			    PosicaoX byte 0,0
+ 00000002 00 00			    PosicaoY byte 0,0
 
  00000000			.code
  00000000			main PROC
 
- 00000000  B8 00000032		    mov  eax,50          ; sleep, to allow OS to time slice
- 00000005  E8 00000000 E	    call Delay           ; (otherwise, some key presses are lost)
- 0000000A  E8 0000000A		    call Mover
- 0000000F  CC			    int 3
- 00000010  EB EE		    jmp main
+ 00000000  B8 00000014		    mov  eax,20          
+ 00000005  E8 00000000 E	    call Delay           
+ 0000000A  E8 0000000E		    call Mover
+ 0000000F  E8 00000047		    call ImprimirPersonagem
+ 00000014  EB EA		    jmp main
 
 				    exit
- 00000019			    main endp
- 00000019			Mover PROC
- 00000019  E8 00000000 E	    call ReadKey         ; look for keyboard input
- 0000001E  74 E0		    jz   main      ; no key pressed yet
-
- 00000020  66| 83 FA 26		    cmp dx,VK_UP  ; Indo pra cima?
- 00000024  75 06		        jne MexerBaixo
- 00000026  B8 00000001		        mov eax, 1
-				        ; Mover pra cima
- 0000002B  C3			        ret 
- 0000002C			    MexerBaixo:
- 0000002C  66| 83 FA 28		    cmp dx,VK_DOWN  ; Indo pra baixo?
- 00000030  75 06		        jne MexerEsq
- 00000032  B8 00000002		        mov eax, 2
-				        ; Mover pra baixo
- 00000037  C3			        ret 
- 00000038			    MexerEsq:
- 00000038  66| 83 FA 25		    cmp dx,VK_LEFT  ; Indo pra esquerda?
- 0000003C  75 06		        jne MexerDireita
- 0000003E  B8 00000003		        mov eax, 3
-				        ; Mover esquerda 
- 00000043  C3			        ret 
- 00000044			    MexerDireita:
- 00000044  66| 83 FA 27		    cmp dx,VK_RIGHT  ; Indo pra direita?
- 00000048  75 05		        jne FimMove
- 0000004A  B8 00000004		        mov eax, 4
-				        ; Mover pra deiraita
- 0000004F			        FimMove:
- 0000004F  C3			        ret
- 00000050			Mover endp
+ 0000001D			    main endp
+ 0000001D			Mover PROC
+ 0000001D  E8 00000000 E	    call ReadKey         ; look for keyboard input
+ 00000022  74 36		    je   FimMove      ; no key pressed yet
+ 00000024  66| 83 FA 26		    cmp dx,VK_UP  ; Indo pra cima?
+ 00000028  75 08		        jne MexerBaixo
+ 0000002A  FE 0D 00000002 R	        dec PosicaoY
+ 00000030  EB 28		        jmp FimMove
+ 00000032			    MexerBaixo:
+ 00000032  66| 83 FA 28		    cmp dx,VK_DOWN  ; Indo pra baixo?
+ 00000036  75 08		        jne MexerEsq
+ 00000038  FE 05 00000002 R	        inc PosicaoY
+ 0000003E  EB 1A		        jmp FimMove
+ 00000040			    MexerEsq:
+ 00000040  66| 83 FA 25		    cmp dx,VK_LEFT  ; Indo pra esquerda?
+ 00000044  75 08		        jne MexerDireita
+ 00000046  FE 0D 00000000 R	        dec PosicaoX
+ 0000004C  EB 0C		        jmp FimMove
+ 0000004E			    MexerDireita:
+ 0000004E  66| 83 FA 27		    cmp dx,VK_RIGHT  ; Indo pra direita?
+ 00000052  75 06		        jne FimMove
+ 00000054  FE 05 00000000 R	        inc PosicaoX
+ 0000005A			    FimMove:
+ 0000005A  C3			    ret
+ 0000005B			Mover endp
+ 0000005B			ImprimirPersonagem PROC
+				    ;Apagar a posicão antiga
+ 0000005B  8A 15 00000001 R	    mov dl, [PosicaoX+1]
+ 00000061  8A 35 00000003 R	    mov dh, [PosicaoY+1]
+ 00000067  E8 00000000 E	    call Gotoxy
+ 0000006C  B0 20		    mov al, 32 
+ 0000006E  E8 00000000 E	    call WriteChar
+				    ; Escrever na posição nova
+ 00000073  8A 15 00000000 R	    mov dl, PosicaoX
+ 00000079  8A 35 00000002 R	    mov dh, PosicaoY
+ 0000007F  E8 00000000 E	    call Gotoxy
+ 00000084  B0 FE		    mov al, 254
+ 00000086  E8 00000000 E	    call WriteChar
+				    ; Salvar a posicao antiga
+ 0000008B  88 15 00000001 R	    mov PosicaoX+1, dl
+ 00000091  88 35 00000003 R	    mov PosicaoY+1, dh
+ 00000097			    fimMove:
+ 00000097  C3			    ret
+ 00000098			ImprimirPersonagem endp
 				end main
-Microsoft (R) Macro Assembler Version 12.00.21005.1	    11/23/17 22:22:35
+Microsoft (R) Macro Assembler Version 12.00.21005.1	    11/25/17 10:31:15
 main.asm						     Symbols 2 - 1
 
 
@@ -160,8 +176,8 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 00000000 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 00000050 Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000004 Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 00000098 Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -207,14 +223,16 @@ HeapCreate . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 HeapDestroy  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 HeapFree . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 HeapSize . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ImprimirPersonagem . . . . . . .	P Near	 0000005B _TEXT	Length= 0000003D Public STDCALL
+  fimMove  . . . . . . . . . . .	L Near	 00000097 _TEXT	
 IsDigit  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 LocalFree  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 MessageBoxA  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-Mover  . . . . . . . . . . . . .	P Near	 00000019 _TEXT	Length= 00000037 Public STDCALL
-  MexerBaixo . . . . . . . . . .	L Near	 0000002C _TEXT	
-  MexerEsq . . . . . . . . . . .	L Near	 00000038 _TEXT	
-  MexerDireita . . . . . . . . .	L Near	 00000044 _TEXT	
-  FimMove  . . . . . . . . . . .	L Near	 0000004F _TEXT	
+Mover  . . . . . . . . . . . . .	P Near	 0000001D _TEXT	Length= 0000003E Public STDCALL
+  MexerBaixo . . . . . . . . . .	L Near	 00000032 _TEXT	
+  MexerEsq . . . . . . . . . . .	L Near	 00000040 _TEXT	
+  MexerDireita . . . . . . . . .	L Near	 0000004E _TEXT	
+  FimMove  . . . . . . . . . . .	L Near	 0000005A _TEXT	
 MsgBoxAsk  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 MsgBox . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 OpenInputFile  . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
@@ -273,7 +291,7 @@ WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000019 Public STDCALL
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000001D Public STDCALL
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
@@ -397,6 +415,8 @@ NUMLOCK_ON . . . . . . . . . . .	Number	 00000020h
 OPEN_ALWAYS  . . . . . . . . . .	Number	 00000004h   
 OPEN_EXISTING  . . . . . . . . .	Number	 00000003h   
 PeekConsoleInput . . . . . . . .	Text   	 PeekConsoleInputA
+PosicaoX . . . . . . . . . . . .	Byte	 00000000 _DATA	
+PosicaoY . . . . . . . . . . . .	Byte	 00000002 _DATA	
 RIGHT_ALT_PRESSED  . . . . . . .	Number	 00000001h   
 RIGHT_CTRL_PRESSED . . . . . . .	Number	 00000004h   
 ReadConsoleInput . . . . . . . .	Text   	 ReadConsoleInputA
