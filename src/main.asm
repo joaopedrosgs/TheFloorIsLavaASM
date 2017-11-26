@@ -19,7 +19,8 @@ main PROC
 Mover PROC
     call ReadKey
     je FimMove
-
+	
+	
     cmp dx,VK_UP
     je MoverCima
 
@@ -31,17 +32,31 @@ Mover PROC
 
     cmp dx,VK_RIGHT
     je MexerDireita
-
+	
+	
+	ret
     MoverCima:
+		cmp PosicaoY, 0
+		je FimMove
         dec PosicaoY
         ret
     MoverBaixo:
+		call GetMaxXY
+		dec dh
+		cmp dh, PosicaoY
+		je FimMove
         inc PosicaoY
         ret
     MoverEsq:
+		cmp PosicaoX, 0
+		je FimMove
         dec PosicaoX
         ret
     MexerDireita:
+		call GetMaxXY
+		dec dl
+		cmp dl, PosicaoX
+		je FimMove
         inc PosicaoX
         ret
     FimMove:
