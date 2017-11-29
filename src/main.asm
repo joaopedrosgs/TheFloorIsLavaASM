@@ -59,10 +59,10 @@ DesenharBordas PROC
     mov  dl,0 ; coluna
     mov  dh,1 ; linha
     Vertical:
-        ; Desenhar a linha do topo
+        ; Desenhar a linha do esquerda
         call Gotoxy
         call WriteChar
-        ; Desenhar a linha de baixo
+        ; Desenhar a linha da direita
         add dl, MaxX
         inc dl
         call Gotoxy
