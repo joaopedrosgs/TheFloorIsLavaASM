@@ -4,7 +4,7 @@ Include ..\Irvine32.inc
 .data
 	;mapa byte 119 DUP(32), 0 ; string de caracteres do chão
     PosicaoX byte 1,1
-    PosicaoY byte 1,1
+    PosicaoY byte 14,1
     MaxX byte 1
     MaxY byte 28
 
@@ -13,6 +13,11 @@ main PROC
 		call GetMaxXY
         sub dl, 2
         mov MaxX, dl
+
+        ; Colocar o player no meio da tela horizontalmente
+        mov ax, WORD PTR MaxX
+        div dl
+        mov PosicaoX, al
 LOOP_PRINCIPAL:
     mov  eax,20          
     call Delay           
