@@ -1,5 +1,7 @@
 Include ..\Irvine32.inc
           
+CARACTERE_PERSONAGEM = 254
+CARACTERE_ESPACO = 32
 
 .data
 	;mapa byte 119 DUP(32), 0 ; string de caracteres do chão
@@ -10,14 +12,7 @@ Include ..\Irvine32.inc
 
 .code
 main PROC
-		call GetMaxXY
-        sub dl, 2
-        mov MaxX, dl
-
-        ; Colocar o player no meio da tela horizontalmente
-        mov ax, WORD PTR MaxX
-        div dl
-        mov PosicaoX, al
+    call Inicio
 LOOP_PRINCIPAL:
     mov  eax,20          
     call Delay           
@@ -26,10 +21,62 @@ LOOP_PRINCIPAL:
     jmp LOOP_PRINCIPAL
     exit
     main endp
+
+Inicio PROC
+    call GetMaxXY
+    sub dl, 2
+    mov MaxX, dl
+    ; Colocar o player no meio da tela horizontalmente
+    mov ax, WORD PTR MaxX
+    div dl
+    mov PosicaoX, al
+    call DesenharBordas
+    ret
+Inicio endp
+
+DesenharBordas PROC
+
+    mov ecx, 0
+    mov cl,  MaxX ; Linhas Horizontais
+    mov  dl,1 ; coluna
+    mov  dh,0 ; linha
+    mov al, 205
+    Horizontal:
+        ; Desenhar a linha do topo
+        call Gotoxy
+        call WriteChar
+        ; Desenhar a linha de baixo
+        add dh, MaxY
+        inc dh
+        call Gotoxy
+        call WriteChar
+        ; Resetar a linha
+        mov dh, 0
+        inc dl
+        loop Horizontal
+    mov cl, MaxY
+    mov al, 186
+    mov  dl,0 ; coluna
+    mov  dh,1 ; linha
+    Vertical:
+        ; Desenhar a linha do topo
+        call Gotoxy
+        call WriteChar
+        ; Desenhar a linha de baixo
+        add dl, MaxX
+        inc dl
+        call Gotoxy
+        call WriteChar
+        ; Resetar a linha
+        mov dl, 0
+        inc dh
+        loop Vertical
+    ret
+DesenharBordas endp
+
 Mover PROC
     call ReadKey
     je FimMove
-	
 	
     cmp dx,VK_UP
     je MoverCima
@@ -80,13 +127,13 @@ ImprimirPersonagem PROC
     ret
     ImprimirEfetivamente:
         call Gotoxy
-        mov al, 32 
+        mov al, CARACTERE_ESPACO
         call WriteChar ; Apagando a posicão antiga
         ; Escrever na posição nova
         mov dl, PosicaoX
         mov dh, PosicaoY
         call Gotoxy
-        mov al, 254
+        mov al, CARACTERE_PERSONAGEM
         call WriteChar
         ; Salvar a posicao antiga
         mov PosicaoX[1], dl
