@@ -3,17 +3,22 @@ Include ..\Irvine32.inc
 
 .data
 	;mapa byte 119 DUP(32), 0 ; string de caracteres do chão
-    PosicaoX byte 0,1
-    PosicaoY byte 0,1
+    PosicaoX byte 1,1
+    PosicaoY byte 1,1
+    MaxX byte 1
+    MaxY byte 28
 
 .code
 main PROC
-
+		call GetMaxXY
+        sub dl, 2
+        mov MaxX, dl
+LOOP_PRINCIPAL:
     mov  eax,20          
     call Delay           
     call Mover
     call ImprimirPersonagem
-    jmp main
+    jmp LOOP_PRINCIPAL
     exit
     main endp
 Mover PROC
@@ -33,28 +38,25 @@ Mover PROC
     cmp dx,VK_RIGHT
     je MexerDireita
 	
-	
 	ret
     MoverCima:
-		cmp PosicaoY, 0
+		cmp PosicaoY, 1
 		je FimMove
         dec PosicaoY
         ret
     MoverBaixo:
-		call GetMaxXY
-		dec dh
+		mov dh, MaxY
 		cmp dh, PosicaoY
 		je FimMove
         inc PosicaoY
         ret
     MoverEsq:
-		cmp PosicaoX, 0
+		cmp PosicaoX, 1
 		je FimMove
         dec PosicaoX
         ret
     MexerDireita:
-		call GetMaxXY
-		dec dl
+		mov dl, MaxX
 		cmp dl, PosicaoX
 		je FimMove
         inc PosicaoX
