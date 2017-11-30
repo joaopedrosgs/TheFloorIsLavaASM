@@ -23,6 +23,17 @@ LOOP_PRINCIPAL:
 	main endp
 
 Inicio PROC
+;----- esconder o cursor ---------------------------------------
+.data
+cursorInfo CONSOLE_CURSOR_INFO <>
+outHandle  DWORD ?
+.code
+   INVOKE GetStdHandle, STD_OUTPUT_HANDLE
+   mov    outHandle,eax
+   INVOKE GetConsoleCursorInfo, outHandle, ADDR cursorInfo
+   mov    cursorInfo.bVisible,0
+   INVOKE SetConsoleCursorInfo, outHandle, ADDR cursorInfo
+;---------------------------------------------------------------
 	call GetMaxXY
 	sub dl, 2
 	mov MaxX, dl
