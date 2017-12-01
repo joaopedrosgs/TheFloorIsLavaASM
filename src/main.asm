@@ -38,7 +38,9 @@ outHandle  DWORD ?
 	sub dl, 2
 	mov MaxX, dl
 	; Colocar o player no meio da tela horizontalmente
-	mov ax, WORD PTR MaxX
+	mov ax, 0
+	mov al, MaxX
+	mov dl, 2
 	div dl
 	mov PosicaoX, al
 	call DesenharBordas
