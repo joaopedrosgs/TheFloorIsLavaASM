@@ -10,6 +10,11 @@ CARACTERE_ESPACO = 32
 	MaxX byte 1
 	MaxY byte 28
 
+	; Relacionado ao cursor --------------------------------
+	cursorInfo CONSOLE_CURSOR_INFO <>
+	outHandle  DWORD ?	
+	;-------------------------------------------------------
+
 .code
 main PROC
 	call Inicio
@@ -22,30 +27,29 @@ LOOP_PRINCIPAL:
 	exit
 	main endp
 
-Inicio PROC
+Inicio PROC USES EAX EDX
 ;----- esconder o cursor ---------------------------------------
-.data
-cursorInfo CONSOLE_CURSOR_INFO <>
-outHandle  DWORD ?
-.code
    INVOKE GetStdHandle, STD_OUTPUT_HANDLE
    mov    outHandle,eax
    INVOKE GetConsoleCursorInfo, outHandle, ADDR cursorInfo
    mov    cursorInfo.bVisible,0
    INVOKE SetConsoleCursorInfo, outHandle, ADDR cursorInfo
 ;---------------------------------------------------------------
+	; Salvando o X maximo 
 	call GetMaxXY
-	sub dl, 2
-	mov MaxX, dl
+	sub dl, 2 ; Padding de cada lado
+	mov MaxX, dl ; Salva o x maximo
 	; Colocar o player no meio da tela horizontalmente
-	mov ax, WORD PTR MaxX
-	div dl
+	xor eax,eax 
+	mov al, MaxX
+	mov dl, 2
+	div dl ; Divide a posicao maxima por 2
 	mov PosicaoX, al
 	call DesenharBordas
 	ret
 Inicio endp
 
-DesenharBordas PROC
+DesenharBordas PROC uses ECX EDX EAX
 
 	mov ecx, 0
 	mov cl,  MaxX ; Linhas Horizontais
@@ -127,7 +131,7 @@ Mover PROC
 	FimMove:
 		ret
 Mover endp
-ImprimirPersonagem PROC
+ImprimirPersonagem PROC USES EDX EAX
 	;Pegando os dados pra checar se mudou a posição e pra apagar a posição antiga
 	mov dl, PosicaoX[1]
 	mov dh, PosicaoY[1]
