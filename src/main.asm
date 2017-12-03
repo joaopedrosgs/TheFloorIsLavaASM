@@ -9,7 +9,9 @@ CARACTERE_ESPACO = 32
 	PosicaoY byte 14,1
 	MaxX byte 1
 	MaxY byte 28
-
+	TempoLava dword 0
+	PosLava word 0
+	LavaOn byte 0
 .code
 main PROC
 	call Inicio
@@ -18,6 +20,8 @@ LOOP_PRINCIPAL:
 	call Delay           
 	call Mover
 	call ImprimirPersonagem
+	call PontoDeLava
+	call AvancaLava
 	jmp LOOP_PRINCIPAL
 	exit
 	main endp
@@ -153,4 +157,57 @@ ImprimirPersonagem PROC
 		mov PosicaoY[1], dh
 		ret
 ImprimirPersonagem endp
+PontoDeLava PROC
+	cmp LavaOn, 0
+	ja fimp
+	mov dx, PosLava
+	call Gotoxy
+	mov al, CARACTERE_ESPACO
+	call WriteChar
+	call Randomize
+	mov eax, 30
+	call RandomRange
+	mov dh, al
+	add dh, 4
+	mov eax, 80
+	call RandomRange
+	add dl, 4
+	mov dl, al
+	mov PosLava, dx
+	call Gotoxy
+	mov eax, yellow
+	call SetTextColor
+	mov al, 1
+	call WriteChar
+	mov eax, white
+	call SetTextColor
+	call GetMseconds
+	mov TempoLava, eax
+	mov LavaOn, 1
+	fimp:
+		ret
+PontoDeLava endp
+AvancaLava PROC
+	call GetMseconds
+	sub eax, TempoLava
+	cmp eax, 10000
+	ja some
+	cmp eax, 5000
+	ja mudaCor
+	ret
+	mudaCor:
+		mov dx, PosLava
+		call Gotoxy
+		mov eax, red
+		call SetTextColor
+		mov al, 1
+		call WriteChar
+		mov eax, white
+		call SetTextColor
+		mov LavaOn, 2
+		ret
+	some:
+		mov LavaOn, 0
+	ret
+AvancaLava endp
 end main
