@@ -2,6 +2,7 @@ Include ..\Irvine32.inc
 		  
 CARACTERE_PERSONAGEM = 254
 CARACTERE_ESPACO = 32
+CARACTERE_PRELAVA = 205
 
 .data
 	;mapa byte 119 DUP(32), 0 ; string de caracteres do chão
@@ -9,7 +10,9 @@ CARACTERE_ESPACO = 32
 	PosicaoY byte 14,1
 	MaxX byte 1
 	MaxY byte 28
-
+	TempoLava dword 0
+	PosLava word 0
+	LavaOn byte 0
 	; Relacionado ao cursor --------------------------------
 	cursorInfo CONSOLE_CURSOR_INFO <>
 	outHandle  DWORD ?	
@@ -23,6 +26,8 @@ LOOP_PRINCIPAL:
 	call Delay           
 	call Mover
 	call ImprimirPersonagem
+	call PontoDeLava
+	call AvancaLava
 	jmp LOOP_PRINCIPAL
 	exit
 	main endp
@@ -51,10 +56,10 @@ Inicio endp
 
 DesenharBordas PROC uses ECX EDX EAX
 
-	mov ecx, 0
-	mov cl,  MaxX ; Linhas Horizontais
-	mov  dl,1 ; coluna
-	mov  dh,0 ; linha
+	xor ecx, ecx
+	mov cl, MaxX	; Linhas Horizontais
+	mov dl,1		; coluna
+	xor dh,dh		; linha
 	mov al, 205
 	Horizontal:
 		; Desenhar a linha do topo
@@ -66,12 +71,12 @@ DesenharBordas PROC uses ECX EDX EAX
 		call Gotoxy
 		call WriteChar
 		; Resetar a linha
-		mov dh, 0
+		xor dh, dh
 		inc dl
 		loop Horizontal
 	mov cl, MaxY
 	mov al, 186
-	mov  dl,0 ; coluna
+	xor  dl,dl ; coluna
 	mov  dh,1 ; linha
 	Vertical:
 		; Desenhar a linha do esquerda
@@ -155,4 +160,57 @@ ImprimirPersonagem PROC USES EDX EAX
 		mov PosicaoY[1], dh
 		ret
 ImprimirPersonagem endp
+PontoDeLava PROC
+	cmp LavaOn, 0
+	ja fimp
+	mov dx, PosLava
+	call Gotoxy
+	mov al, CARACTERE_ESPACO
+	call WriteChar
+	call Randomize
+	mov eax, 30
+	call RandomRange
+	mov dh, al
+	add dh, 4
+	mov eax, 80
+	call RandomRange
+	add dl, 4
+	mov dl, al
+	mov PosLava, dx
+	call Gotoxy
+	mov eax, yellow
+	call SetTextColor
+	mov al, CARACTERE_PRELAVA
+	call WriteChar
+	mov eax, white
+	call SetTextColor
+	call GetMseconds
+	mov TempoLava, eax
+	mov LavaOn, 1
+	fimp:
+		ret
+PontoDeLava endp
+AvancaLava PROC
+	call GetMseconds
+	sub eax, TempoLava
+	cmp eax, 10000
+	ja some
+	cmp eax, 5000
+	ja mudaCor
+	ret
+	mudaCor:
+		mov dx, PosLava
+		call Gotoxy
+		mov eax, red
+		call SetTextColor
+		mov al, CARACTERE_PRELAVA
+		call WriteChar
+		mov eax, white
+		call SetTextColor
+		mov LavaOn, 2
+		ret
+	some:
+		mov LavaOn, 0
+	ret
+AvancaLava endp
 end main
