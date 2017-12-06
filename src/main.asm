@@ -3,6 +3,13 @@ Include ..\Irvine32.inc
 CARACTERE_PERSONAGEM = 254
 CARACTERE_ESPACO = 32
 CARACTERE_PRELAVA = 205
+NUMERO_LAVAS = 3
+
+LAVA STRUCT
+	TempoLava DWORD 0
+	PosLava WORD 0
+	LavaOn BYTE 0
+LAVA ends
 
 .data
 	;mapa byte 119 DUP(32), 0 ; string de caracteres do chão
@@ -10,9 +17,10 @@ CARACTERE_PRELAVA = 205
 	PosicaoY byte 14,1
 	MaxX byte 1
 	MaxY byte 28
-	TempoLava dword 0
-	PosLava word 0
-	LavaOn byte 0
+	lavaVet LAVA NUMERO_LAVAS DUP(<>)
+	;11TempoLava dword 4 DUP(0)
+	;11PosLava word 4 DUP (0)
+	;11LavaOn byte 4 DUP (0)
 	; Relacionado ao cursor --------------------------------
 	cursorInfo CONSOLE_CURSOR_INFO <>
 	outHandle  DWORD ?	
@@ -20,6 +28,7 @@ CARACTERE_PRELAVA = 205
 
 .code
 main PROC
+	int 3 ;modificado
 	call Inicio
 LOOP_PRINCIPAL:
 	mov  eax,20          
@@ -161,56 +170,77 @@ ImprimirPersonagem PROC USES EDX EAX
 		ret
 ImprimirPersonagem endp
 PontoDeLava PROC
-	cmp LavaOn, 0
-	ja fimp
-	mov dx, PosLava
-	call Gotoxy
-	mov al, CARACTERE_ESPACO
-	call WriteChar
-	call Randomize
-	mov eax, 30
-	call RandomRange
-	mov dh, al
-	add dh, 4
-	mov eax, 80
-	call RandomRange
-	add dl, 4
-	mov dl, al
-	mov PosLava, dx
-	call Gotoxy
-	mov eax, yellow
-	call SetTextColor
-	mov al, CARACTERE_PRELAVA
-	call WriteChar
-	mov eax, white
-	call SetTextColor
-	call GetMseconds
-	mov TempoLava, eax
-	mov LavaOn, 1
-	fimp:
-		ret
-PontoDeLava endp
-AvancaLava PROC
-	call GetMseconds
-	sub eax, TempoLava
-	cmp eax, 10000
-	ja some
-	cmp eax, 5000
-	ja mudaCor
-	ret
-	mudaCor:
-		mov dx, PosLava
+	xor edi, edi
+	mov ecx, NUMERO_LAVAS
+	criapontos: ;Loop percorre todas as posições no vetor de lavas associando uma posição randômica dentro do range da tela para cada uma dessas lavas
+		cmp (LAVA PTR lavaVet[edi]).LavaOn, 0
+		ja fimp
+		mov dx, (LAVA PTR lavaVet[edi]).PosLava
 		call Gotoxy
-		mov eax, red
+		mov al, CARACTERE_ESPACO
+		call WriteChar
+		call Randomize
+		mov eax, 21
+		call RandomRange
+		mov dh, al ;gera uma posição de altura
+		add dh, 4	;tira das bordas
+		call Radndomize
+		mov eax, 75
+		call RandomRange
+		mov dl, al	;gera posição de largura
+		add dl, 4	;tira das bordas
+		mov (LAVA PTR lavaVet[edi]).PosLava, dx
+		add edi, TYPE LAVA
+		loop criapontos
+	xor edi, edi
+	mov ecx, NUMERO_LAVAS
+	escrevepontoscriados: ;Imprime na tela cada uma das lavas do vetor de lavas à partir de suas posições
+		mov dx, (LAVA PTR lavaVet[edi]).PosLava
+		call Gotoxy
+		mov eax, yellow
 		call SetTextColor
 		mov al, CARACTERE_PRELAVA
 		call WriteChar
 		mov eax, white
 		call SetTextColor
-		mov LavaOn, 2
+		call GetMseconds
+		mov (LAVA PTR lavaVet[edi]).TempoLava, eax
+		mov (LAVA PTR lavaVet[edi]).LavaOn, 1
+		fimp:
+		add edi, TYPE LAVA
+		loop escrevepontoscriados
 		ret
-	some:
-		mov LavaOn, 0
-	ret
+PontoDeLava endp
+AvancaLava PROC
+	xor edi, edi
+	mov ecx, NUMERO_LAVAS
+	avanco:
+		call GetMseconds
+		sub eax, (LAVA PTR lavaVet[edi]).TempoLava
+		cmp eax, 10000
+		ja some
+		cmp eax, 5000
+		ja mudaCor
+		add edi, TYPE LAVA
+		loop avanco
+		ret
+		mudaCor:
+			mov dx, (LAVA PTR lavaVet[edi]).PosLava
+			call Gotoxy
+			mov eax, red
+			call SetTextColor
+			mov al, CARACTERE_PRELAVA
+			call WriteChar
+			mov eax, white
+			call SetTextColor
+			mov (LAVA PTR lavaVet[edi]).LavaOn, 2
+			add edi, TYPE LAVA
+			loop avanco
+			ret
+		some:
+			mov (LAVA PTR lavaVet[edi]).LavaOn, 0
+			add edi, TYPE LAVA
+			loop avanco
+		ret
 AvancaLava endp
 end main
