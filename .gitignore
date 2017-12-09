@@ -4,3 +4,5 @@ src/main.lst
 src/main.obj
 src/main.pdb
 src/main.sbr
+src/test.asm
+src/test.lst

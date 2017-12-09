@@ -11,18 +11,22 @@ mImprimirEm MACRO X, Y, CARACTERE
 ENDM   
 
 mGerarAleatorio8 MACRO largura, dest
-		call Randomize
 		xor eax,eax
 		mov al, largura
+		sub al, PADDING/2
+		call Randomize
 		call RandomRange ; de 0 até largura-padding
 		add al, PADDING/2 ; Largura = Largura + padding/2
-		mov  dest,al
+		mov dest,al
+		mov  eax,50         
+		call Delay    
 endm
 
 CARACTERE_PERSONAGEM = 254
 CARACTERE_ESPACO = 32
-CARACTERE_PRELAVA = 205
-NUMERO_LAVAS = 6
+CARACTERE_PRELAVA = 176
+CARACTERE_LAVA = 177
+NUMERO_LAVAS = 5
 PADDING = 4
 
 LavaP STRUCT
@@ -46,8 +50,7 @@ LavaP ENDS
 	MaxY byte 28
 
 	;Lava
-	LavaOn byte 0
-	Lavas LavaP NUMERO_LAVAS DUP(<>)
+	Lavas LavaP NUMERO_LAVAS DUP(<5,5,0,0,1>)
 
 	; Relacionado ao cursor --------------------------------
 	cursorInfo CONSOLE_CURSOR_INFO <>
@@ -98,6 +101,18 @@ Inicio PROC USES EAX EDX
 	div dl ; Divide a posicao maxima por 2
 	mov PosicaoX, al
 	call DesenharBordas
+	mov ecx, NUMERO_LAVAS
+	mov edi,0
+	IniciandoLavas:
+	mGerarAleatorio8 MaxY, (LavaP PTR Lavas[edi]).posY
+	mGerarAleatorio8 MaxX, (LavaP PTR Lavas[edi]).posX
+	mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_PRELAVA
+	mov (LavaP PTR Lavas[edi]).Stage, 1
+	mov (LavaP PTR Lavas[edi]).Growing, 1
+	mov (LavaP PTR Lavas[edi]).Time, 1
+	add edi,TYPE LavaP
+	dec ecx
+	jnz IniciandoLavas
 	ret
 Inicio endp
 
@@ -207,19 +222,53 @@ ImprimirPersonagem PROC USES EDX EAX
 ImprimirPersonagem endp
 
 LoopLavas PROC uses ecx
-	mov ecx, NUMERO_LAVAS-1
-	CadaLava:
-		inc Lavas[ecx].Time;
-		cmp Lavas[ecx].Stage,0
-		jnz Estagio1
-		Estagio0:			
-			mGerarAleatorio8 MaxY, Lavas[ecx].posY
-			mGerarAleatorio8 MaxX, Lavas[ecx].posX
-			mImprimirEm Lavas[ecx].posX, Lavas[ecx].posY, CARACTERE_PRELAVA
-			mov Lavas[ecx].Stage, 1
-			ret
+	mov ecx, NUMERO_LAVAS
+	mov edi, 0
+	; inicio ------------------------------------------
+	InicioLoop:
+	cmp (LavaP PTR Lavas[edi]).Growing,0 ;Se está diminuindo
+		je CadaLavaDiminuindo
+
+	CadaLavaAumentando:
+		inc (LavaP PTR Lavas[edi]).Time
+		cmp (LavaP PTR Lavas[edi]).Time,700 ;decide se vai pro estagio 3
+		ja Estagio3
+		cmp (LavaP PTR Lavas[edi]).Time,400 ;decide se vai pro estagio 2
+		ja Estagio2
+		cmp (LavaP PTR Lavas[edi]).Time,200 ;decide se vai pro estagio 1
+		ja Estagio1
+		jmp FimCadaLavaAumentando
 		Estagio1:
-	loop CadaLava
+			; -- Pinta de vermelho
+			mov  eax,red+(black*16)
+			call SetTextColor
+			mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_LAVA
+			mov  eax,white+(black*16)
+			call SetTextColor
+			jmp FimCadaLavaAumentando
+
+		Estagio2:
+			; -- Explode
+			jmp FimCadaLavaAumentando
+		
+		Estagio3:
+			; -- Começa a diminuir
+			mov (LavaP PTR Lavas[edi]).Growing, 0
+			mov (LavaP PTR Lavas[edi]).Time, 0
+		
+	FimCadaLavaAumentando:
+	add edi,TYPE LavaP
+	dec ecx
+	jnz InicioLoop
+	ret
+
+	; Lava Diminuindo --------------------------------
+	CadaLavaDiminuindo:
+
+	FimCadaLavaDiminuindo:
+	add edi,TYPE LavaP
+	dec ecx
+	jnz InicioLoop
 	ret
 LoopLavas endp
 
