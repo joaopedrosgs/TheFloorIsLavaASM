@@ -13,10 +13,10 @@ ENDM
 mGerarAleatorio8 MACRO largura, dest
 		xor eax,eax
 		mov al, largura
-		sub al, PADDING/2
+		sub al, PADDING*2
 		call Randomize
 		call RandomRange ; de 0 até largura-padding
-		add al, PADDING/2 ; Largura = Largura + padding/2
+		add al, PADDING ; Largura = Largura + padding/2
 		mov dest,al
 		mov  eax,50         
 		call Delay    
@@ -37,7 +37,7 @@ LavaP STRUCT
 	Growing	byte	1 ;Se growing = 0; então decrementa o estado
 LavaP ENDS
 
-
+ImprimirQuadradoEm PROTO, :BYTE, :BYTE, :BYTE
 .data
 	;mapa byte 119 DUP(32), 0 ; string de caracteres do chão
 
@@ -232,13 +232,13 @@ LoopLavas PROC uses ecx
 	CadaLavaAumentando:
 		inc (LavaP PTR Lavas[edi]).Time
 		cmp (LavaP PTR Lavas[edi]).Time,700 ;decide se vai pro estagio 3
-		ja Estagio3
+		ja Estagio3Aumentando
 		cmp (LavaP PTR Lavas[edi]).Time,400 ;decide se vai pro estagio 2
-		ja Estagio2
+		ja Estagio2Aumentando
 		cmp (LavaP PTR Lavas[edi]).Time,200 ;decide se vai pro estagio 1
-		ja Estagio1
+		ja Estagio1Aumentando
 		jmp FimCadaLavaAumentando
-		Estagio1:
+		Estagio1Aumentando:
 			; -- Pinta de vermelho
 			mov  eax,red+(black*16)
 			call SetTextColor
@@ -247,11 +247,17 @@ LoopLavas PROC uses ecx
 			call SetTextColor
 			jmp FimCadaLavaAumentando
 
-		Estagio2:
-			; -- Explode
+		Estagio2Aumentando:
+			mov  eax,red+(black*16)
+			call SetTextColor
+			mov dl, (LavaP PTR Lavas[edi]).posX
+     		mov dh,(LavaP PTR Lavas[edi]).posY
+			INVOKE ImprimirQuadradoEm, dl, dh, CARACTERE_LAVA
+			mov  eax,white+(black*16)
+			call SetTextColor
 			jmp FimCadaLavaAumentando
 		
-		Estagio3:
+		Estagio3Aumentando:
 			; -- Começa a diminuir
 			mov (LavaP PTR Lavas[edi]).Growing, 0
 			mov (LavaP PTR Lavas[edi]).Time, 0
@@ -264,12 +270,64 @@ LoopLavas PROC uses ecx
 
 	; Lava Diminuindo --------------------------------
 	CadaLavaDiminuindo:
+		dec (LavaP PTR Lavas[edi]).Time
+		cmp (LavaP PTR Lavas[edi]).Time, 0
+		mov ebx, (LavaP PTR Lavas[edi]).Time
+		jz ReiniciaLava
+		cmp (LavaP PTR Lavas[edi]).Time,400 ;decide se vai pro estagio 2
+		ja Estagio2Diminuindo
+		jbe Estagio1Diminuindo
 
+		Estagio1Diminuindo:
+			mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_PRELAVA
+			jmp FimCadaLavaDiminuindo
+			
+		Estagio2Diminuindo:
+			int 3
+			mov dl, (LavaP PTR Lavas[edi]).posX
+     		mov dh,(LavaP PTR Lavas[edi]).posY
+			INVOKE ImprimirQuadradoEm, dl, dh, CARACTERE_ESPACO ; Apaga o quadrado
+			mov  eax,red+(black*16)
+			call SetTextColor
+			mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_LAVA ; Imprime a lava q foi apagada
+			mov  eax,white+(black*16)
+			call SetTextColor
+			jmp FimCadaLavaDiminuindo
+			
+		ReiniciaLava:
+			mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_ESPACO ; Apaga lava antiga
+			mGerarAleatorio8 MaxY, (LavaP PTR Lavas[edi]).posY
+			mGerarAleatorio8 MaxX, (LavaP PTR Lavas[edi]).posX
+			mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_PRELAVA
+			mov (LavaP PTR Lavas[edi]).Stage, 1
+			mov (LavaP PTR Lavas[edi]).Growing, 1
+			mov (LavaP PTR Lavas[edi]).Time, 1
 	FimCadaLavaDiminuindo:
 	add edi,TYPE LavaP
 	dec ecx
 	jnz InicioLoop
 	ret
 LoopLavas endp
+ImprimirQuadradoEm PROC USES ecx edx eax, X:byte, Y:byte, CARACTERE:byte
+	xor edx, edx
+	xor eax, eax
+	mov dl, X
+	sub dl, PADDING
+	mov dh, Y
+	sub dh, PADDING
+	mov ecx, PADDING*2
+	mov al, CARACTERE
+	CadaLinha:
+	call Gotoxy
+	push ecx
+	mov ecx, PADDING*2
+	EscreverLinha:
+	call WriteChar
+	loop EscreverLinha
+	inc dh
+	pop ecx
+	loop CadaLinha
+	ret
 
+ImprimirQuadradoEm endp   
 end main
