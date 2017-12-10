@@ -144,6 +144,20 @@ DesenharBordas PROC uses ECX EDX EAX
 DesenharBordas endp
 
 Mover PROC
+	mov ecx, NUMERO_LAVAS
+	mov edi,0
+	TestaMorte: 
+		cmp (LavaP PTR Lavas[edi]).Stage, 1 ;Vê se a lava está em fase nociva
+		jb FimTeste
+		mov al, (LavaP PTR Lavas[edi]).posX
+		cmp PosicaoX, al
+		jnz FimTeste
+		mov al, (LavaP PTR Lavas[edi]).posY
+		cmp PosicaoY, al
+		jz Morre ;Se está no mesmo x e y da lava, morre
+		FimTeste:
+			add edi,TYPE LavaP
+			loop TestaMorte
 	call ReadKey
 	je FimMove
 	
@@ -185,6 +199,9 @@ Mover PROC
 		inc PosicaoX
 		ret
 	FimMove:
+		ret
+	Morre:
+		int 3
 		ret
 Mover endp
 ImprimirPersonagem PROC USES EDX EAX
@@ -321,16 +338,25 @@ ImprimirQuadradoEm PROC USES ecx edx eax, X:byte, Y:byte, CARACTERE:byte
 	mov ecx, 5
 	mov al, CARACTERE
 	CadaLinha:
+	mov bl, dl
 	call Gotoxy
 	push ecx
 	mov ecx, 7
 	EscreverLinha:
-	call WriteChar
+	cmp PosicaoX, bl
+	jne Continua
+	cmp PosicaoY, dh
+	je Morre
+	Continua:
+		call WriteChar
+		inc bl
 	loop EscreverLinha
 	inc dh
 	pop ecx
 	loop CadaLinha
 	ret
+	Morre:
+		int 3
 ImprimirQuadradoEm endp   
 
 ColocarLavaEmPosicaoAleatoria PROC 
