@@ -16,7 +16,7 @@ CARACTERE_ESPACO = 32
 CARACTERE_PRELAVA = 176
 CARACTERE_LAVA = 177
 CARACTERE_LAVA_CENTRO = 178
-NUMERO_LAVAS = 10
+NUMERO_LAVAS = 60
 PADDING = 4
 
 LavaP STRUCT
@@ -161,7 +161,7 @@ Mover PROC
 	
 	ret
 	MoverCima:
-		cmp PosicaoY, 2
+		cmp PosicaoY, 7
 		je FimMove
 		dec PosicaoY
 		ret
@@ -305,7 +305,7 @@ GerarAleatorio8 PROC, largura:byte
 	sub al, (PADDING-1)*3
 	call Randomize
 	call RandomRange ; de 0 até largura-padding
-	add al, PADDING*2 ; Largura = Largura + padding/
+	add al, (PADDING-1)*2 ; Largura = Largura + padding/
 	ret
 GerarAleatorio8 endp
 
@@ -337,11 +337,11 @@ ColocarLavaEmPosicaoAleatoria PROC
 		mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_ESPACO ; Apaga lava antiga
 		INVOKE GerarAleatorio8, MaxY
 		mov (LavaP PTR Lavas[edi]).posY, al
-		mov eax, 10
+		mov eax, 1
 		call Delay
 		INVOKE GerarAleatorio8, MaxX
 		mov (LavaP PTR Lavas[edi]).posX, al
-		mov eax, 10
+		mov eax, 1
 		call Delay
 		mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_PRELAVA
 		mov (LavaP PTR Lavas[edi]).Stage, 0
