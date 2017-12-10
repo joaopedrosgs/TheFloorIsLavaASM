@@ -18,7 +18,7 @@ mGerarAleatorio8 MACRO largura, dest
 		call RandomRange ; de 0 até largura-padding
 		add al, PADDING ; Largura = Largura + padding/2
 		mov dest,al
-		mov  eax,50         
+		mov  eax,10         
 		call Delay    
 endm
 
@@ -33,8 +33,8 @@ LavaP STRUCT
 	posX	byte	5
 	posY	byte	5
 	Stage	byte	0 ;0 = Seta novas posições ; 1 = Fica Vermelho; 2 = Expande; 3 = Seta o Growing pra 0;
-	Time	DWORD	0 ;0 = Começo; 50 = Estado 1; 100 = Estado 2; 200 = Estado 3; (valores sujeitos à alteração)
 	Growing	byte	1 ;Se growing = 0; então decrementa o estado
+	Time	DWORD	0 ;0 = Começo; 50 = Estado 1; 100 = Estado 2; 200 = Estado 3; (valores sujeitos à alteração)
 LavaP ENDS
 
 ImprimirQuadradoEm PROTO, :BYTE, :BYTE, :BYTE
@@ -107,7 +107,7 @@ Inicio PROC USES EAX EDX
 	mGerarAleatorio8 MaxY, (LavaP PTR Lavas[edi]).posY
 	mGerarAleatorio8 MaxX, (LavaP PTR Lavas[edi]).posX
 	mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_PRELAVA
-	mov (LavaP PTR Lavas[edi]).Stage, 1
+	mov (LavaP PTR Lavas[edi]).Stage, 0
 	mov (LavaP PTR Lavas[edi]).Growing, 1
 	mov (LavaP PTR Lavas[edi]).Time, 1
 	add edi,TYPE LavaP
@@ -231,23 +231,29 @@ LoopLavas PROC uses ecx
 
 	CadaLavaAumentando:
 		inc (LavaP PTR Lavas[edi]).Time
-		cmp (LavaP PTR Lavas[edi]).Time,700 ;decide se vai pro estagio 3
+		cmp (LavaP PTR Lavas[edi]).Time,150 ;decide se vai pro estagio 3
 		ja Estagio3Aumentando
-		cmp (LavaP PTR Lavas[edi]).Time,400 ;decide se vai pro estagio 2
+		cmp (LavaP PTR Lavas[edi]).Time,100 ;decide se vai pro estagio 2
 		ja Estagio2Aumentando
-		cmp (LavaP PTR Lavas[edi]).Time,200 ;decide se vai pro estagio 1
+		cmp (LavaP PTR Lavas[edi]).Time,50 ;decide se vai pro estagio 1
 		ja Estagio1Aumentando
 		jmp FimCadaLavaAumentando
 		Estagio1Aumentando:
 			; -- Pinta de vermelho
+			cmp (LavaP PTR Lavas[edi]).Stage, 1
+			je FimCadaLavaAumentando
 			mov  eax,red+(black*16)
 			call SetTextColor
 			mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_LAVA
 			mov  eax,white+(black*16)
 			call SetTextColor
+			mov (LavaP PTR Lavas[edi]).Stage, 1
 			jmp FimCadaLavaAumentando
 
 		Estagio2Aumentando:
+			; imprime o quadrado vermelho em volta
+			cmp (LavaP PTR Lavas[edi]).Stage, 2	
+			je FimCadaLavaAumentando
 			mov  eax,red+(black*16)
 			call SetTextColor
 			mov dl, (LavaP PTR Lavas[edi]).posX
@@ -255,12 +261,14 @@ LoopLavas PROC uses ecx
 			INVOKE ImprimirQuadradoEm, dl, dh, CARACTERE_LAVA
 			mov  eax,white+(black*16)
 			call SetTextColor
+			mov (LavaP PTR Lavas[edi]).Stage, 2
 			jmp FimCadaLavaAumentando
 		
 		Estagio3Aumentando:
 			; -- Começa a diminuir
 			mov (LavaP PTR Lavas[edi]).Growing, 0
-			mov (LavaP PTR Lavas[edi]).Time, 0
+			mov (LavaP PTR Lavas[edi]).Stage, 0
+			je FimCadaLavaAumentando
 		
 	FimCadaLavaAumentando:
 	add edi,TYPE LavaP
@@ -270,20 +278,19 @@ LoopLavas PROC uses ecx
 
 	; Lava Diminuindo --------------------------------
 	CadaLavaDiminuindo:
-		dec (LavaP PTR Lavas[edi]).Time
-		cmp (LavaP PTR Lavas[edi]).Time, 0
-		mov ebx, (LavaP PTR Lavas[edi]).Time
+		sub (LavaP PTR Lavas[edi]).Time, 1
 		jz ReiniciaLava
-		cmp (LavaP PTR Lavas[edi]).Time,400 ;decide se vai pro estagio 2
+		cmp (LavaP PTR Lavas[edi]).Time,100 ;decide se vai pro estagio 2
 		ja Estagio2Diminuindo
 		jbe Estagio1Diminuindo
-
+		jmp FimCadaLavaDiminuindo
 		Estagio1Diminuindo:
 			mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_PRELAVA
 			jmp FimCadaLavaDiminuindo
 			
 		Estagio2Diminuindo:
-			int 3
+			cmp (LavaP PTR Lavas[edi]).Stage,2
+			je FimCadaLavaDiminuindo
 			mov dl, (LavaP PTR Lavas[edi]).posX
      		mov dh,(LavaP PTR Lavas[edi]).posY
 			INVOKE ImprimirQuadradoEm, dl, dh, CARACTERE_ESPACO ; Apaga o quadrado
@@ -292,6 +299,7 @@ LoopLavas PROC uses ecx
 			mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_LAVA ; Imprime a lava q foi apagada
 			mov  eax,white+(black*16)
 			call SetTextColor
+			mov (LavaP PTR Lavas[edi]).Stage,2
 			jmp FimCadaLavaDiminuindo
 			
 		ReiniciaLava:
@@ -299,9 +307,9 @@ LoopLavas PROC uses ecx
 			mGerarAleatorio8 MaxY, (LavaP PTR Lavas[edi]).posY
 			mGerarAleatorio8 MaxX, (LavaP PTR Lavas[edi]).posX
 			mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_PRELAVA
-			mov (LavaP PTR Lavas[edi]).Stage, 1
+			mov (LavaP PTR Lavas[edi]).Stage, 0
 			mov (LavaP PTR Lavas[edi]).Growing, 1
-			mov (LavaP PTR Lavas[edi]).Time, 1
+			mov (LavaP PTR Lavas[edi]).Time, 0
 	FimCadaLavaDiminuindo:
 	add edi,TYPE LavaP
 	dec ecx
