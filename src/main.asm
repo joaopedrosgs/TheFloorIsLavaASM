@@ -1,4 +1,6 @@
 Include ..\Irvine32.inc
+Include ..\winmm.inc		  
+Includelib ..\winmm.lib
 		  
 mImprimirEm MACRO X, Y, CARACTERE
 	xor edx, edx
@@ -29,14 +31,22 @@ LavaP ENDS
 
 ImprimirQuadradoEm	PROTO, :BYTE, :BYTE, :BYTE
 GerarAleatorio8	PROTO, :BYTE
-ColocarLavaEmPosicaoAleatoria PROTO,
+ColocarLavaEmPosicaoAleatoria PROTO
+TocaSom PROTO, :BYTE
 
 .data
+	;som
+	tocaUmaVez DWORD 00020001h
+	efeito1 BYTE "..\Sounds\Estagio1_sfx.wav",0
+	efeito2 BYTE "..\Sounds\Estagio2_sfx.wav",0
+	efeito3 BYTE "..\Sounds\Death_sfx.wav",0
+	somAtual BYTE 1
 	;mapa byte 119 DUP(32), 0 ; string de caracteres do chão
 
 	;Player
 	PosicaoX byte 20,1
 	PosicaoY byte 14,1
+	flagMorte byte 0
 
 	;Tela
 	MaxX byte 60
@@ -256,6 +266,7 @@ LoopLavas PROC uses ecx
 
 		Estagio2Aumentando:
 			; imprime o quadrado vermelho em volta
+			mov somAtual, 2
 			cmp (LavaP PTR Lavas[edi]).Stage, 2	
 			je FimCadaLavaAumentando
 			mov  eax,red+(black*16)
@@ -279,6 +290,13 @@ LoopLavas PROC uses ecx
 	add edi,TYPE LavaP
 	dec ecx
 	jnz InicioLoop
+	cmp (LavaP PTR Lavas[0]).Time, 1
+	je barulho
+	cmp (LavaP PTR Lavas[0]).Time, 101
+	je barulho
+	ret
+	barulho:
+		INVOKE TocaSom, somAtual
 	ret
 
 	; Lava Diminuindo --------------------------------
@@ -308,6 +326,7 @@ LoopLavas PROC uses ecx
 			jmp FimCadaLavaDiminuindo
 			
 		ReiniciaLava:
+			mov somAtual, 1
 			INVOKE ColocarLavaEmPosicaoAleatoria
 	FimCadaLavaDiminuindo:
 	add edi,TYPE LavaP
@@ -346,7 +365,8 @@ ImprimirQuadradoEm PROC USES ecx edx eax, X:byte, Y:byte, CARACTERE:byte
 	cmp PosicaoX, bl
 	jne Continua
 	cmp PosicaoY, dh
-	je Morre
+	jne Continua
+	mov flagMorte, 1 ;Omae wa mo shindeiru
 	Continua:
 		call WriteChar
 		inc bl
@@ -354,8 +374,12 @@ ImprimirQuadradoEm PROC USES ecx edx eax, X:byte, Y:byte, CARACTERE:byte
 	inc dh
 	pop ecx
 	loop CadaLinha
+	cmp flagMorte, 1
+	je Morre
 	ret
 	Morre:
+	mov somAtual, 3
+		INVOKE TocaSom, somAtual
 		int 3
 ImprimirQuadradoEm endp   
 
@@ -376,4 +400,21 @@ ColocarLavaEmPosicaoAleatoria PROC
 		ret
 ColocarLavaEmPosicaoAleatoria endp
 
+
+TocaSom PROC, qual:BYTE
+	cmp qual, 3
+	je toca3
+	cmp qual, 2
+	je toca2
+	INVOKE PlaySound, OFFSET efeito1, NULL, tocaUmaVez
+	ret
+	toca2:
+		INVOKE PlaySound, OFFSET efeito2, NULL, tocaUmaVez
+		ret
+	toca3:
+		INVOKE PlaySound, OFFSET efeito3, NULL, tocaUmaVez
+		mov eax, 2000
+		call Delay
+	ret
+TocaSom endp
 end main
