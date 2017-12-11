@@ -20,14 +20,16 @@ CARACTERE_LAVA_CENTRO = 178
 NUMERO_LAVAS = 60
 PADDING = 4
 CONS_TEMPO = 50
+TOCA_UMA_VEZ = 00020001h
 
-LavaP STRUCT
+
+Lava_T STRUCT
 	posX	byte	5
 	posY	byte	5
 	Stage	byte	0 ;0 = Seta novas posições ; 1 = Fica Vermelho; 2 = Expande; 3 = Seta o Growing pra 0;
 	Growing	byte	1 ;Se growing = 0; então decrementa o estado
 	Time	DWORD	0 ;0 = Começo; 50 = Estado 1; 100 = Estado 2; 200 = Estado 3; (valores sujeitos à alteração)
-LavaP ENDS
+Lava_T ENDS
 
 ImprimirQuadradoEm	PROTO, :BYTE, :BYTE, :BYTE
 GerarAleatorio8	PROTO, :BYTE
@@ -43,7 +45,6 @@ EscreverTempo PROTO
 	
 	tempoAtual DWORD 0
 	;som
-	tocaUmaVez DWORD 00020001h
 	efeito1 BYTE "Sounds\Estagio1_sfx.wav",0
 	efeito2 BYTE "Sounds\Estagio2_sfx.wav",0
 	efeito3 BYTE "Sounds\Death_sfx.wav",0
@@ -56,11 +57,11 @@ EscreverTempo PROTO
 	flagMorte byte 0
 
 	;Tela
-	MaxX byte 60
-	MaxY byte 28
+	MaxX byte 119
+	MaxY byte 29 
 
 	;Lava
-	Lavas LavaP NUMERO_LAVAS DUP(<5,5,0,0,1>)
+	Lavas Lava_T NUMERO_LAVAS DUP(<5,5,0,0,1>)
 
 	; Relacionado ao cursor --------------------------------
 	cursorInfo CONSOLE_CURSOR_INFO <>
@@ -70,23 +71,25 @@ EscreverTempo PROTO
 	outHandle dword ?
 	titleStr byte "The Floor is Lava", 0
 	_small_rect SMALL_RECT <0, 0, 119,29>
+	telaBSize COORD <120, 31>
 	;-------------------------------------------------------
 
 	;Relacionado ao menu -----------------------------------
-	LinhaMorte BYTE "           VOCE MORREU!",0, "Aperte Enter para jogar novamente",0,"            Tempo: ",1
-	LinhaMenu BYTE "              (  .      )",0, "          )           (              )",0,"                .  '   .   '  .  '  .",0,"       (    , )       (.   )  (   ',    )",0,"        .' ) ( . )    ,  ( ,     )   ( .",0,"     ). , ( .   (  ) ( , ')  .' (  ,    )",0,"    (_,) . ), ) _) _,')  (, ) '. )  ,. (' )",0," ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",0,0, "            Aperte ENTER para jogar",0,0,0,0,0,0,0,0,"Como Jogar:",0 ,"Seu personagem eh o ponto branco",0,"O objetivo e escapar da lava",1
+	LinhaMorte BYTE "           VOCE MORREU!",0, "Aperte Enter para jogar novamente",0,0,"            Pontos: ",1
+	LinhaMenu BYTE "              (  .      )",0, "          )           (              )",0,"                .  '   .   '  .  '  .",0,"       (    , )       (.   )  (   ',    )",0,"        .' ) ( . )    ,  ( ,     )   ( .",0,"     ). , ( .   (  ) ( , ')  .' (  ,    )",0,"    (_,) . ), ) _) _,')  (, ) '. )  ,. (' )",0," ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",0,0, "            Aperte ENTER para jogar",0,0,0,0,0,0,0,0,"Como Jogar: Desvie das lavas para manter-se vivo",1
 	LinhaTempo BYTE "Tempo Atual: ",0
+
 .code
 main PROC
 	call Inicio
 LOOP_PRINCIPAL:
 	mov  eax,20          
-	call Delay
-	call EscreverTempo           
-	call Mover
-	call ImprimirPersonagem
-	call LoopLavas
-	call ChecarMorte
+	call Delay ; Delay para o loop não rodar muito rapido
+	call EscreverTempo ; Imprime o tempo no topo da tela        
+	call Mover ; Lê o input do jogador e move
+	call ImprimirPersonagem ; Apaga a posição antiga do jogador e escreve uma nova
+	call LoopLavas ; Processa as lavas
+	call ChecarMorte ; Checa a morte do jogador
 	jmp LOOP_PRINCIPAL
 	exit
 	main endp
@@ -105,15 +108,14 @@ Inicio PROC USES EAX EDX
 ;---------------------------------------------------------------
  	invoke getStdHandle, STD_OUTPUT_HANDLE
 	mov outHandle, eax
+		invoke SetConsoleScreenBufferSize, outHandle, telaBSize
 	invoke setConsoleWindowInfo, outHandle, 1, addr _small_rect
 	invoke setConsoleTitle, addr titleStr	
-	;call LimparTela
-	
 ;---------------------------------------------------------------
 	; Salvando o X maximo 
-	call GetMaxXY
-	sub dl, 2 ; Padding de cada lado
-	mov MaxX, dl ; Salva o x maximo
+	;call GetMaxXY
+	;sub dl, 2 ; Padding de cada lado
+	;mov MaxX, dl ; Salva o x maximo
 	; Colocar o player no meio da tela horizontalmente
 	xor eax,eax 
 	mov al, MaxX
@@ -133,16 +135,16 @@ Inicio PROC USES EAX EDX
 	mov edi, 0
 	Cada:
 	INVOKE ColocarLavaEmPosicaoAleatoria
-	add edi, TYPE LavaP
+	add edi, TYPE Lava_T
 	loop cada
 	ret
 Inicio endp
 
 ; Desenha as bordas da tela
 DesenharBordas PROC uses ECX EDX EAX
-
 	xor ecx, ecx
 	mov cl, MaxX	; Linhas Horizontais
+	dec cl			; de 0 até MaxX-1
 	mov dl,1		; coluna
 	xor dh,dh		; linha
 	mov al, 205
@@ -152,7 +154,6 @@ DesenharBordas PROC uses ECX EDX EAX
 		call WriteChar
 		; Desenhar a linha de baixo
 		add dh, MaxY
-		inc dh
 		call Gotoxy
 		call WriteChar
 		; Resetar a linha
@@ -160,6 +161,7 @@ DesenharBordas PROC uses ECX EDX EAX
 		inc dl
 		loop Horizontal
 	mov cl, MaxY
+	dec cl
 	mov al, 186
 	xor  dl,dl ; coluna
 	mov  dh,1 ; linha
@@ -169,7 +171,7 @@ DesenharBordas PROC uses ECX EDX EAX
 		call WriteChar
 		; Desenhar a linha da direita
 		add dl, MaxX
-		inc dl
+		
 		call Gotoxy
 		call WriteChar
 		; Resetar a linha
@@ -178,16 +180,15 @@ DesenharBordas PROC uses ECX EDX EAX
 		loop Vertical
 
 	mov dl, MaxX
-	inc dl
 	mov dh, 0
 	call Gotoxy
 	mov al, 187
 	call WriteChar ; Desenha a borda superior direita
 	mov dh, MaxY
-	inc dh
 	call Gotoxy
 	inc al
 	call WriteChar; Desenha a borda inferior direita
+	
 	mov dl, 0
 	mov al, 200
 	call Gotoxy
@@ -204,16 +205,16 @@ Mover PROC
 	mov ecx, NUMERO_LAVAS
 	mov edi,0
 	TestaMorte: 
-		cmp (LavaP PTR Lavas[edi]).Stage, 1 ;Vê se a lava está em fase nociva
+		cmp (Lava_T PTR Lavas[edi]).Stage, 1 ;Vê se a lava está em fase nociva
 		jbe FimTeste
-		mov al, (LavaP PTR Lavas[edi]).posX
+		mov al, (Lava_T PTR Lavas[edi]).posX
 		cmp PosicaoX, al
 		jnz FimTeste
-		mov al, (LavaP PTR Lavas[edi]).posY
+		mov al, (Lava_T PTR Lavas[edi]).posY
 		cmp PosicaoY, al
 		jz Morre ;Se está no mesmo x e y da lava, morre
 		FimTeste:
-			add edi,TYPE LavaP
+			add edi,TYPE Lava_T
 			loop TestaMorte
 	call ReadKey
 	je FimMove
@@ -291,59 +292,61 @@ LoopLavas PROC uses ecx
 	mov edi, 0
 	; inicio ------------------------------------------
 	InicioLoop:
-	cmp (LavaP PTR Lavas[edi]).Growing,0 ;Se está diminuindo
+	cmp (Lava_T PTR Lavas[edi]).Growing,0 ;Se está diminuindo
 		je CadaLavaDiminuindo
 
 	CadaLavaAumentando:
-		inc (LavaP PTR Lavas[edi]).Time
-		cmp (LavaP PTR Lavas[edi]).Time,150 ;decide se vai pro estagio 3
+		inc (Lava_T PTR Lavas[edi]).Time
+		cmp (Lava_T PTR Lavas[edi]).Time,150 ;decide se vai pro estagio 3
 		ja Estagio3Aumentando
-		cmp (LavaP PTR Lavas[edi]).Time,100 ;decide se vai pro estagio 2
+		cmp (Lava_T PTR Lavas[edi]).Time,100 ;decide se vai pro estagio 2
 		ja Estagio2Aumentando
-		cmp (LavaP PTR Lavas[edi]).Time,50 ;decide se vai pro estagio 1
+		cmp (Lava_T PTR Lavas[edi]).Time,50 ;decide se vai pro estagio 1
 		ja Estagio1Aumentando
 		jmp FimCadaLavaAumentando
 		Estagio1Aumentando:
 			; -- Pinta de vermelho
-			cmp (LavaP PTR Lavas[edi]).Stage, 1
 			je FimCadaLavaAumentando
 			mov  eax,red+(black*16)
 			call SetTextColor
-			mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_LAVA
+			mImprimirEm (Lava_T PTR Lavas[edi]).posX, (Lava_T PTR Lavas[edi]).posY, CARACTERE_LAVA
 			mov  eax,white+(black*16)
 			call SetTextColor
-			mov (LavaP PTR Lavas[edi]).Stage, 1
+			mov (Lava_T PTR Lavas[edi]).Stage, 1
 			jmp FimCadaLavaAumentando
 
 		Estagio2Aumentando:
 			; imprime o quadrado vermelho em volta
+			cmp (Lava_T PTR Lavas[edi]).Stage, 2
+			je FimCadaLavaAumentando
 			mov somAtual, 2
-			cmp (LavaP PTR Lavas[edi]).Stage, 2	
 			je FimCadaLavaAumentando
 			mov  eax,red+(black*16)
 			call SetTextColor
-			mov dl, (LavaP PTR Lavas[edi]).posX
-     		mov dh,(LavaP PTR Lavas[edi]).posY
+			mov dl, (Lava_T PTR Lavas[edi]).posX
+     		mov dh,(Lava_T PTR Lavas[edi]).posY
 			INVOKE ImprimirQuadradoEm, dl, dh, CARACTERE_LAVA
-			mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_LAVA_CENTRO
+						mImprimirEm (Lava_T PTR Lavas[edi]).posX, (Lava_T PTR Lavas[edi]).posY, CARACTERE_LAVA_CENTRO
+
+
 			mov  eax,white+(black*16)
 			call SetTextColor
-			mov (LavaP PTR Lavas[edi]).Stage, 2
+			mov (Lava_T PTR Lavas[edi]).Stage, 2
 			jmp FimCadaLavaAumentando
 		
 		Estagio3Aumentando:
 			; -- Começa a diminuir
-			mov (LavaP PTR Lavas[edi]).Growing, 0
-			mov (LavaP PTR Lavas[edi]).Stage, 0
+			mov (Lava_T PTR Lavas[edi]).Growing, 0
+			mov (Lava_T PTR Lavas[edi]).Stage, 0
 			je FimCadaLavaAumentando
 		
 	FimCadaLavaAumentando:
-	add edi,TYPE LavaP
+	add edi,TYPE Lava_T
 	dec ecx
 	jnz InicioLoop
-	cmp (LavaP PTR Lavas[0]).Time, 1
+	cmp (Lava_T PTR Lavas[0]).Time, 1
 	je barulho
-	cmp (LavaP PTR Lavas[0]).Time, 101
+	cmp (Lava_T PTR Lavas[0]).Time, 101
 	je barulho
 	ret
 	barulho:
@@ -352,35 +355,35 @@ LoopLavas PROC uses ecx
 
 	; Lava Diminuindo --------------------------------
 	CadaLavaDiminuindo:
-		sub (LavaP PTR Lavas[edi]).Time, 1
+		sub (Lava_T PTR Lavas[edi]).Time, 1
 		jz ReiniciaLava
-		cmp (LavaP PTR Lavas[edi]).Time,100 ;decide se vai pro estagio 2
+		cmp (Lava_T PTR Lavas[edi]).Time,100 ;decide se vai pro estagio 2
 		ja Estagio2Diminuindo
 		jbe Estagio1Diminuindo
 		jmp FimCadaLavaDiminuindo
 		Estagio1Diminuindo:
-			mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_PRELAVA
+			mImprimirEm (Lava_T PTR Lavas[edi]).posX, (Lava_T PTR Lavas[edi]).posY, CARACTERE_PRELAVA
 			jmp FimCadaLavaDiminuindo
 			
 		Estagio2Diminuindo:
 			mov  eax,red+(black*16)
 			call SetTextColor
-			mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_LAVA ; Imprime a lava q foi apagada
+			mImprimirEm (Lava_T PTR Lavas[edi]).posX, (Lava_T PTR Lavas[edi]).posY, CARACTERE_LAVA ; Imprime a lava q foi apagada
 			mov  eax,white+(black*16)
 			call SetTextColor
-			cmp (LavaP PTR Lavas[edi]).Stage,2
+			cmp (Lava_T PTR Lavas[edi]).Stage,2
 			je FimCadaLavaDiminuindo
-			mov dl, (LavaP PTR Lavas[edi]).posX
-     		mov dh,(LavaP PTR Lavas[edi]).posY
+			mov dl, (Lava_T PTR Lavas[edi]).posX
+     		mov dh,(Lava_T PTR Lavas[edi]).posY
 			INVOKE ImprimirQuadradoEm, dl, dh, CARACTERE_ESPACO ; Apaga o quadrado
-			mov (LavaP PTR Lavas[edi]).Stage,2
+			mov (Lava_T PTR Lavas[edi]).Stage,2
 			jmp FimCadaLavaDiminuindo
 			
 		ReiniciaLava:
 			mov somAtual, 1
 			INVOKE ColocarLavaEmPosicaoAleatoria
 	FimCadaLavaDiminuindo:
-	add edi,TYPE LavaP
+	add edi,TYPE Lava_T
 	dec ecx
 	jnz InicioLoop
 	ret
@@ -399,7 +402,7 @@ GerarAleatorio8 endp
 
 ; Esse procedimento imprime um quadrado de caracteres de diametro ebx*2+1
 ImprimirQuadradoEm PROC USES ecx edx eax ebx, X:byte, Y:byte, CARACTERE:byte
-	mov ebx, 3
+	mov ebx, 3 ; diametro (3*2)+1
 	xor edx, edx
 	xor eax, eax
 	mov dl, X
@@ -419,7 +422,7 @@ ImprimirQuadradoEm PROC USES ecx edx eax ebx, X:byte, Y:byte, CARACTERE:byte
 	jne Continua
 	cmp PosicaoY, dh
 	jne Continua
-	mov flagMorte, 1 ;Omae wa mo shindeiru
+	mov flagMorte, 1 
 	Continua:
 		call WriteChar
 		inc bl
@@ -433,20 +436,20 @@ ImprimirQuadradoEm endp
 ;Esse Procedimento apaga a lava antiga e gera uma nova posição aleatoria para a mesma,
 ;também volta ela para o estagio 1 e em crescimento
 ColocarLavaEmPosicaoAleatoria PROC
-		mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_ESPACO ; Apaga lava antiga
+		mImprimirEm (Lava_T PTR Lavas[edi]).posX, (Lava_T PTR Lavas[edi]).posY, CARACTERE_ESPACO ; Apaga lava antiga
 		INVOKE GerarAleatorio8, MaxY
-		mov (LavaP PTR Lavas[edi]).posY, al
+		mov (Lava_T PTR Lavas[edi]).posY, al
 		mov eax, 1
 		call Delay
 		inc tempoAtual
 		INVOKE GerarAleatorio8, MaxX
-		mov (LavaP PTR Lavas[edi]).posX, al
+		mov (Lava_T PTR Lavas[edi]).posX, al
 		mov eax, 1
 		call Delay
-		mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_PRELAVA
-		mov (LavaP PTR Lavas[edi]).Stage, 0
-		mov (LavaP PTR Lavas[edi]).Growing, 1
-		mov (LavaP PTR Lavas[edi]).Time, 0
+		mImprimirEm (Lava_T PTR Lavas[edi]).posX, (Lava_T PTR Lavas[edi]).posY, CARACTERE_PRELAVA
+		mov (Lava_T PTR Lavas[edi]).Stage, 0
+		mov (Lava_T PTR Lavas[edi]).Growing, 1
+		mov (Lava_T PTR Lavas[edi]).Time, 0
 		ret
 ColocarLavaEmPosicaoAleatoria endp
 
@@ -524,13 +527,13 @@ TocaSom PROC, qual:BYTE
 	je toca3
 	cmp qual, 2
 	je toca2
-	INVOKE PlaySound, OFFSET efeito1, NULL, tocaUmaVez
+	INVOKE PlaySound, OFFSET efeito1, NULL, TOCA_UMA_VEZ
 	ret
 	toca2:
-		INVOKE PlaySound, OFFSET efeito2, NULL, tocaUmaVez
+		INVOKE PlaySound, OFFSET efeito2, NULL, TOCA_UMA_VEZ
 		ret
 	toca3:
-		INVOKE PlaySound, OFFSET efeito3, NULL, tocaUmaVez
+		INVOKE PlaySound, OFFSET efeito3, NULL, TOCA_UMA_VEZ
 		mov eax, 2000
 		call Delay
 	ret
