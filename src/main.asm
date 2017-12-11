@@ -32,6 +32,7 @@ LavaP ENDS
 ImprimirQuadradoEm	PROTO, :BYTE, :BYTE, :BYTE
 GerarAleatorio8	PROTO, :BYTE
 ColocarLavaEmPosicaoAleatoria PROTO
+LoopMenu PROTO
 TocaSom PROTO, :BYTE
 
 .data
@@ -64,6 +65,9 @@ TocaSom PROTO, :BYTE
 	;titleStr byte "The Floor is Lava", 0
 	;_small_rect SMALL_RECT <0, 0, 84, 42>
 	;-------------------------------------------------------
+
+	;Relacionado ao menu -----------------------------------
+	LinhaMenu BYTE "              (  .      )",0, "          )           (              )",0,"                .  '   .   '  .  '  .",0,"       (    , )       (.   )  (   ',    )",0,"        .' ) ( . )    ,  ( ,     )   ( .",0,"     ). , ( .   (  ) ( , ')  .' (  ,    )",0,"    (_,) . ), ) _) _,')  (, ) '. )  ,. (' )",0," ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",0,0, "            Aperte ENTER para jogar",1
 
 .code
 main PROC
@@ -103,7 +107,16 @@ Inicio PROC USES EAX EDX
 	mov dl, 2
 	div dl ; Divide a posicao maxima por 2
 	mov PosicaoX, al
+	mov  eax,yellow+(red*16)
+    call SetTextColor
+	call clrscr
 	call DesenharBordas
+	call LoopMenu
+	mov  eax,white+(black*16)
+    call SetTextColor
+	call clrscr
+	call DesenharBordas
+	
 	mov ecx, NUMERO_LAVAS
 	mov edi, 0
 	Cada:
@@ -400,6 +413,41 @@ ColocarLavaEmPosicaoAleatoria PROC
 		ret
 ColocarLavaEmPosicaoAleatoria endp
 
+LoopMenu PROC uses edx edi eax
+inicioLoopMenu:
+	mov dl, 37
+	mov dh, 6
+	call Gotoxy
+	mov ebx, OFFSET LinhaMenu
+	mov edi, 0
+	Imprimir:
+	cmp BYTE PTR LinhaMenu[edi], 1	
+	je Fim
+	ja ContinuaImprimindo
+	inc dh ; Pula linha
+	call Gotoxy
+	ContinuaImprimindo:
+	mov al, BYTE PTR LinhaMenu[edi]
+	cmp al,40
+	jb ImprimeMesmo
+	cmp al, 41
+	ja ImprimeMesmo
+	xor al, 00000001b ; Transforma ( em ) e vice versa
+	mov BYTE PTR LinhaMenu[edi], al
+	ImprimeMesmo:
+	call WriteChar
+	inc edi
+	jmp Imprimir
+	fim:
+	mov eax, 500
+	call Delay
+	call ReadKey
+	cmp dx,VK_RETURN
+	je retorna
+	jmp inicioLoopMenu
+	retorna:
+	ret	
+LoopMenu endp
 
 TocaSom PROC, qual:BYTE
 	cmp qual, 3
@@ -417,4 +465,5 @@ TocaSom PROC, qual:BYTE
 		call Delay
 	ret
 TocaSom endp
+
 end main
