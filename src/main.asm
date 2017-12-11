@@ -246,6 +246,8 @@ Mover PROC
 	FimMove:
 		ret
 	Morre:
+		mov somAtual, 3
+		INVOKE TocaSom, somAtual
 		int 3
 		ret
 Mover endp
