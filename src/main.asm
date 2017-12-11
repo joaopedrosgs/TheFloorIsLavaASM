@@ -12,7 +12,6 @@ mImprimirEm MACRO X, Y, CARACTERE
 	call WriteChar
 ENDM   
 
-
 CARACTERE_PERSONAGEM = 254
 CARACTERE_ESPACO = 32
 CARACTERE_PRELAVA = 176
@@ -20,6 +19,7 @@ CARACTERE_LAVA = 177
 CARACTERE_LAVA_CENTRO = 178
 NUMERO_LAVAS = 60
 PADDING = 4
+CONS_TEMPO = 50
 
 LavaP STRUCT
 	posX	byte	5
@@ -33,14 +33,20 @@ ImprimirQuadradoEm	PROTO, :BYTE, :BYTE, :BYTE
 GerarAleatorio8	PROTO, :BYTE
 ColocarLavaEmPosicaoAleatoria PROTO
 LoopMenu PROTO
+LoopEndGame PROTO
 TocaSom PROTO, :BYTE
+ChecarMorte PROTO
+EscreverTempo PROTO
 
 .data
+
+	
+	tempoAtual DWORD 0
 	;som
 	tocaUmaVez DWORD 00020001h
-	efeito1 BYTE "..\Sounds\Estagio1_sfx.wav",0
-	efeito2 BYTE "..\Sounds\Estagio2_sfx.wav",0
-	efeito3 BYTE "..\Sounds\Death_sfx.wav",0
+	efeito1 BYTE "Sounds\Estagio1_sfx.wav",0
+	efeito2 BYTE "Sounds\Estagio2_sfx.wav",0
+	efeito3 BYTE "Sounds\Death_sfx.wav",0
 	somAtual BYTE 1
 	;mapa byte 119 DUP(32), 0 ; string de caracteres do chão
 
@@ -62,26 +68,33 @@ TocaSom PROTO, :BYTE
 
 	; Relacionado à tela -----------------------------------
 	outHandle dword ?
-	;titleStr byte "The Floor is Lava", 0
-	;_small_rect SMALL_RECT <0, 0, 84, 42>
+	titleStr byte "The Floor is Lava", 0
+	_small_rect SMALL_RECT <0, 0, 119,29>
 	;-------------------------------------------------------
 
 	;Relacionado ao menu -----------------------------------
-	LinhaMenu BYTE "              (  .      )",0, "          )           (              )",0,"                .  '   .   '  .  '  .",0,"       (    , )       (.   )  (   ',    )",0,"        .' ) ( . )    ,  ( ,     )   ( .",0,"     ). , ( .   (  ) ( , ')  .' (  ,    )",0,"    (_,) . ), ) _) _,')  (, ) '. )  ,. (' )",0," ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",0,0, "            Aperte ENTER para jogar",1
-
+	LinhaMorte BYTE "           VOCE MORREU!",0, "Aperte Enter para jogar novamente",0,"            Tempo: ",1
+	LinhaMenu BYTE "              (  .      )",0, "          )           (              )",0,"                .  '   .   '  .  '  .",0,"       (    , )       (.   )  (   ',    )",0,"        .' ) ( . )    ,  ( ,     )   ( .",0,"     ). , ( .   (  ) ( , ')  .' (  ,    )",0,"    (_,) . ), ) _) _,')  (, ) '. )  ,. (' )",0," ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",0,0, "            Aperte ENTER para jogar",0,0,0,0,0,0,0,0,"Como Jogar:",0 ,"Seu personagem eh o ponto branco",0,"O objetivo e escapar da lava",1
+	LinhaTempo BYTE "Tempo Atual: ",0
 .code
 main PROC
 	call Inicio
 LOOP_PRINCIPAL:
 	mov  eax,20          
-	call Delay           
+	call Delay
+	call EscreverTempo           
 	call Mover
 	call ImprimirPersonagem
 	call LoopLavas
+	call ChecarMorte
 	jmp LOOP_PRINCIPAL
 	exit
 	main endp
 
+;	Procedimento que pega o tamanho da janela, desenha as bordas
+;	Inicia o menu,
+;	Seta o player no meio da tela e
+;	Seta as lavas
 Inicio PROC USES EAX EDX
 ;----- esconder o cursor ---------------------------------------
 	INVOKE GetStdHandle, STD_OUTPUT_HANDLE
@@ -90,11 +103,11 @@ Inicio PROC USES EAX EDX
 	mov    cursorInfo.bVisible,0
 	INVOKE SetConsoleCursorInfo, outHandle, ADDR cursorInfo
 ;---------------------------------------------------------------
- 	;invoke getStdHandle, STD_OUTPUT_HANDLE
-	;mov outHandle, eax
-	;invoke setConsoleWindowInfo, outHandle, 1, addr _small_rect
-	;invoke setConsoleTitle, addr titleStr	
-	;call clrscr
+ 	invoke getStdHandle, STD_OUTPUT_HANDLE
+	mov outHandle, eax
+	invoke setConsoleWindowInfo, outHandle, 1, addr _small_rect
+	invoke setConsoleTitle, addr titleStr	
+	;call LimparTela
 	
 ;---------------------------------------------------------------
 	; Salvando o X maximo 
@@ -109,14 +122,13 @@ Inicio PROC USES EAX EDX
 	mov PosicaoX, al
 	mov  eax,yellow+(red*16)
     call SetTextColor
-	call clrscr
+	call LimparTela
 	call DesenharBordas
 	call LoopMenu
 	mov  eax,white+(black*16)
     call SetTextColor
-	call clrscr
+	call LimparTela
 	call DesenharBordas
-	
 	mov ecx, NUMERO_LAVAS
 	mov edi, 0
 	Cada:
@@ -126,7 +138,7 @@ Inicio PROC USES EAX EDX
 	ret
 Inicio endp
 
-
+; Desenha as bordas da tela
 DesenharBordas PROC uses ECX EDX EAX
 
 	xor ecx, ecx
@@ -193,7 +205,7 @@ Mover PROC
 	mov edi,0
 	TestaMorte: 
 		cmp (LavaP PTR Lavas[edi]).Stage, 1 ;Vê se a lava está em fase nociva
-		jb FimTeste
+		jbe FimTeste
 		mov al, (LavaP PTR Lavas[edi]).posX
 		cmp PosicaoX, al
 		jnz FimTeste
@@ -226,7 +238,7 @@ Mover PROC
 		ret
 	MoverBaixo:
 		mov dh, MaxY
-		dec dh
+		sub dh,2
 		cmp dh, PosicaoY
 		je FimMove
 		inc PosicaoY
@@ -246,9 +258,7 @@ Mover PROC
 	FimMove:
 		ret
 	Morre:
-		mov somAtual, 3
-		INVOKE TocaSom, somAtual
-		int 3
+		mov flagMorte, 1
 		ret
 Mover endp
 
@@ -417,13 +427,7 @@ ImprimirQuadradoEm PROC USES ecx edx eax ebx, X:byte, Y:byte, CARACTERE:byte
 	inc dh
 	pop ecx
 	loop CadaLinha
-	cmp flagMorte, 1
-	je Morre
 	ret
-	Morre:
-	mov somAtual, 3
-		INVOKE TocaSom, somAtual
-		int 3
 ImprimirQuadradoEm endp   
 
 ;Esse Procedimento apaga a lava antiga e gera uma nova posição aleatoria para a mesma,
@@ -434,6 +438,7 @@ ColocarLavaEmPosicaoAleatoria PROC
 		mov (LavaP PTR Lavas[edi]).posY, al
 		mov eax, 1
 		call Delay
+		inc tempoAtual
 		INVOKE GerarAleatorio8, MaxX
 		mov (LavaP PTR Lavas[edi]).posX, al
 		mov eax, 1
@@ -455,13 +460,13 @@ inicioLoopMenu:
 	mov ebx, OFFSET LinhaMenu
 	mov edi, 0
 	Imprimir:
-	cmp BYTE PTR LinhaMenu[edi], 1	
+	mov al, BYTE PTR LinhaMenu[edi]
+	cmp al, 1	
 	je Fim
 	ja ContinuaImprimindo
 	inc dh ; Pula linha
 	call Gotoxy
 	ContinuaImprimindo:
-	mov al, BYTE PTR LinhaMenu[edi]
 	cmp al,40
 	jb ImprimeMesmo
 	cmp al, 41
@@ -483,6 +488,37 @@ inicioLoopMenu:
 	ret	
 LoopMenu endp
 
+LoopEndGame PROC
+	mov dl, 43
+	mov dh, 12
+	call Gotoxy
+	mov ebx, OFFSET LinhaMorte
+	mov edi, 0
+	Imprimir:
+		mov al, BYTE PTR LinhaMorte[edi]
+		cmp al, 1	
+		je EsperandoJogarNovamente
+		ja ContinuaImprimindo
+		inc dh ; Pula linha
+		call Gotoxy
+		ContinuaImprimindo:
+			call WriteChar
+			inc edi
+			jmp Imprimir
+	EsperandoJogarNovamente:
+
+		mov edx,0
+		mov ecx, CONS_TEMPO
+		mov eax, tempoAtual
+		div ecx
+		call WriteDec
+		blablio:
+		call ReadKey
+		cmp dx,VK_RETURN ; Se apertou enter
+		jne blablio
+	ret
+LoopEndGame endp
+
 TocaSom PROC, qual:BYTE
 	cmp qual, 3
 	je toca3
@@ -499,5 +535,60 @@ TocaSom PROC, qual:BYTE
 		call Delay
 	ret
 TocaSom endp
+
+ChecarMorte PROC
+	cmp flagMorte, 0
+	je fim
+	mov somAtual, 3
+	INVOKE TocaSom, somAtual
+	mov  eax,yellow+(red*16)
+    call SetTextColor
+	call LimparTela
+	call DesenharBordas
+	call LoopEndGame
+	mov somAtual, 1
+	mov flagMorte, 0
+	mov tempoAtual, 0
+	call Inicio
+	fim:
+	ret
+ChecarMorte endp
+
+EscreverTempo PROC
+	mov edx,0
+	mov ecx, CONS_TEMPO
+	mov eax, tempoAtual
+	div ecx
+	mov dh, 2
+	mov dl, MaxX
+	sub dl, 65
+	call Gotoxy
+	mov edx, OFFSET LinhaTempo
+	call WriteString
+	call WriteDec
+	inc tempoAtual
+	ret
+EscreverTempo endp
+
+LimparTela PROC
+
+	xor ecx, ecx
+	mov al, CARACTERE_ESPACO
+	mov dh, 0
+	mov dl, 0
+	call Gotoxy
+	mov cl, MaxY
+	add cl, 2
+	CadaLinha:
+	push ecx
+	mov cl, MaxX
+	CadaCaractere:
+	call WriteChar
+	loop CadaCaractere
+	pop ecx
+	loop CadaLinha
+	ret
+
+LimparTela endp
 
 end main
