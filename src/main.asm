@@ -126,6 +126,7 @@ Inicio PROC USES EAX EDX
 	ret
 Inicio endp
 
+
 DesenharBordas PROC uses ECX EDX EAX
 
 	xor ecx, ecx
@@ -163,9 +164,30 @@ DesenharBordas PROC uses ECX EDX EAX
 		mov dl, 0
 		inc dh
 		loop Vertical
+
+	mov dl, MaxX
+	inc dl
+	mov dh, 0
+	call Gotoxy
+	mov al, 187
+	call WriteChar ; Desenha a borda superior direita
+	mov dh, MaxY
+	inc dh
+	call Gotoxy
+	inc al
+	call WriteChar; Desenha a borda inferior direita
+	mov dl, 0
+	mov al, 200
+	call Gotoxy
+	call WriteChar; Desenha a borda inferior esquerda
+	inc al
+	mov dh,0
+	call Gotoxy
+	call WriteChar; Desenha a borda superior esquerda
 	ret
 DesenharBordas endp
 
+; Lê o input pra mover o personagem e detecta morte
 Mover PROC
 	mov ecx, NUMERO_LAVAS
 	mov edi,0
@@ -227,6 +249,8 @@ Mover PROC
 		int 3
 		ret
 Mover endp
+
+;Imprime o personagem na posição correta, apagando sua posição antiga
 ImprimirPersonagem PROC USES EDX EAX
 	;Pegando os dados pra checar se mudou a posição e pra apagar a posição antiga
 	mov dl, PosicaoX[1]
@@ -248,6 +272,8 @@ ImprimirPersonagem PROC USES EDX EAX
 		 ret
 ImprimirPersonagem endp
 
+;Esse procedimento é o mais importante do jogo, ele da um loop no array de lavas checando em qual
+;estagio cada uma delas está para agir corretamente
 LoopLavas PROC uses ecx
 	mov ecx, NUMERO_LAVAS
 	mov edi, 0
@@ -348,17 +374,19 @@ LoopLavas PROC uses ecx
 	ret
 LoopLavas endp
 
+; Esse procedimento Gera um numero aleatorio que não cause problemas na hora de imprimir um quadrado
 GerarAleatorio8 PROC, largura:byte
 	xor eax,eax
 	mov al, largura
 	sub al, (PADDING-1)*3
 	call Randomize
-	call RandomRange ; de 0 até largura-padding
-	add al, (PADDING-1)*2 ; Largura = Largura + padding/
+	call RandomRange ; de 0 até largura-(PADDING-1)*3
+	add al, (PADDING-1)*2 ; de (PADDING-1)*2 até largura-(PADDING-1)*3+(PADDING-1)*2
 	ret
 GerarAleatorio8 endp
 
-ImprimirQuadradoEm PROC USES ecx edx eax, X:byte, Y:byte, CARACTERE:byte
+; Esse procedimento imprime um quadrado de caracteres de diametro ebx*2+1
+ImprimirQuadradoEm PROC USES ecx edx eax ebx, X:byte, Y:byte, CARACTERE:byte
 	mov ebx, 3
 	xor edx, edx
 	xor eax, eax
@@ -396,7 +424,9 @@ ImprimirQuadradoEm PROC USES ecx edx eax, X:byte, Y:byte, CARACTERE:byte
 		int 3
 ImprimirQuadradoEm endp   
 
-ColocarLavaEmPosicaoAleatoria PROC 
+;Esse Procedimento apaga a lava antiga e gera uma nova posição aleatoria para a mesma,
+;também volta ela para o estagio 1 e em crescimento
+ColocarLavaEmPosicaoAleatoria PROC
 		mImprimirEm (LavaP PTR Lavas[edi]).posX, (LavaP PTR Lavas[edi]).posY, CARACTERE_ESPACO ; Apaga lava antiga
 		INVOKE GerarAleatorio8, MaxY
 		mov (LavaP PTR Lavas[edi]).posY, al
@@ -413,6 +443,8 @@ ColocarLavaEmPosicaoAleatoria PROC
 		ret
 ColocarLavaEmPosicaoAleatoria endp
 
+ ; Esse procedimento lê um array de strings,
+ ; pulando linha onde tem 0 e terminando a impressão onde tem 1
 LoopMenu PROC uses edx edi eax
 inicioLoopMenu:
 	mov dl, 37
@@ -439,10 +471,10 @@ inicioLoopMenu:
 	inc edi
 	jmp Imprimir
 	fim:
-	mov eax, 500
+	mov eax, 500 ; Delay para o fogo mexer
 	call Delay
 	call ReadKey
-	cmp dx,VK_RETURN
+	cmp dx,VK_RETURN ; Se apertou enter
 	je retorna
 	jmp inicioLoopMenu
 	retorna:
